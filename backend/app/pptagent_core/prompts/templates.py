@@ -231,6 +231,11 @@ Refined slides:
 Metadata:
 {{ metadata_json }}
 
+IMPORTANT: All "content" fields MUST be strings, not arrays.
+For bullet_list or numbered_list types, format as a single string with newlines:
+- Use "\\n" to separate bullet points
+- Example: "Point 1\\nPoint 2\\nPoint 3"
+
 Return complete presentation JSON:
 {
   "metadata": {
@@ -245,7 +250,7 @@ Return complete presentation JSON:
       "elements": [
         {
           "type": "text|bullet_list|numbered_list|code_block|table|image",
-          "content": "formatted content",
+          "content": "formatted content as STRING (use \\n for multiple lines)",
           "style": {"font_size": 18, "color": "#000000"},
           "metadata": {}
         }

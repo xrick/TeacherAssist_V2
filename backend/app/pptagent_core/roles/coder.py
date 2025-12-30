@@ -172,9 +172,20 @@ class Coder:
                     logger.warning(f"Invalid content type '{elem_type_str}', defaulting to 'text'")
                     elem_type = ContentType.TEXT
 
+                # Handle content that might be a list or string
+                content_raw = elem_dict.get("content", "")
+                if isinstance(content_raw, list):
+                    # Join list items with newlines for bullet/numbered lists
+                    content = "\n".join(str(item) for item in content_raw)
+                    logger.debug(
+                        f"Converted list content to string: {len(content_raw)} items → {len(content)} chars"
+                    )
+                else:
+                    content = str(content_raw)
+
                 element = ContentElement(
                     type=elem_type,
-                    content=elem_dict.get("content", ""),
+                    content=content,
                     metadata=elem_dict.get("metadata", {}),
                 )
                 elements.append(element)
