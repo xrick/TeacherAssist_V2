@@ -73,6 +73,11 @@ class ContentOrganizer:
             # Parse JSON response
             organized = self._parse_json_response(response.content)
 
+            # Log parsed content for debugging
+            logger.debug(
+                f"Parsed LLM response: {json.dumps(organized, indent=2, ensure_ascii=False)[:2000]}"
+            )
+
             # Validate organized content
             self._validate_organized_content(organized)
 
@@ -83,9 +88,16 @@ class ContentOrganizer:
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response: {e}")
-            logger.debug(
-                f"Response content: {response.content if 'response' in locals() else 'N/A'}"
-            )
+            if "response" in locals():
+                # Log first 1000 chars of response for debugging
+                content_preview = (
+                    response.content[:1000] if len(response.content) > 1000 else response.content
+                )
+                logger.error(f"LLM response preview (first 1000 chars):\n{content_preview}")
+                # Log response length
+                logger.error(f"Full response length: {len(response.content)} characters")
+            else:
+                logger.error("Response object not available")
             raise ValueError(f"Invalid JSON response from LLM: {e}") from e
 
         except Exception as e:
@@ -177,9 +189,18 @@ class ContentOrganizer:
             # Validate elements
             for elem_idx, element in enumerate(slide["elements"]):
                 if "type" not in element:
+                    logger.error(
+                        f"Invalid element at Slide {idx}, element {elem_idx}: {json.dumps(element, ensure_ascii=False)}"
+                    )
+                    logger.error(
+                        f"Full slide content: {json.dumps(slide, indent=2, ensure_ascii=False)[:500]}"
+                    )
                     raise ValueError(f"Slide {idx}, element {elem_idx} missing 'type'")
 
                 if "content" not in element:
+                    logger.error(
+                        f"Invalid element at Slide {idx}, element {elem_idx}: {json.dumps(element, ensure_ascii=False)}"
+                    )
                     raise ValueError(f"Slide {idx}, element {elem_idx} missing 'content'")
 
         logger.debug(f"Content validation passed: {len(slides)} slides")

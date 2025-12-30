@@ -30,6 +30,7 @@ frontend/.vite/
 # Data
 backend/data/outputs/*
 backend/data/cache/*
+backend/data/templates/*.pptx
 !backend/data/.gitkeep
 !backend/data/templates/.gitkeep
 
@@ -45,3 +46,7 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+.pids/
+backend/data/templates/ML_colorful.pptx
+backend/data/templates/Reading_colorful.pptx
+refData/testdata/K-means_Clustering.md

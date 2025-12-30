@@ -2,6 +2,7 @@
 Generation API routes
 """
 
+import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
@@ -123,7 +124,7 @@ async def generate_presentation_stream(
                     # Error event
                     yield {
                         "event": "error",
-                        "data": {"error": update["error"]},
+                        "data": json.dumps({"error": update["error"]}),
                     }
                     break
 
@@ -132,30 +133,34 @@ async def generate_presentation_stream(
                     presentation = update["result"]
                     yield {
                         "event": "complete",
-                        "data": {
-                            "presentation_id": presentation_id,
-                            "slide_count": presentation.slide_count(),
-                            "download_url": f"/api/v1/presentations/{presentation_id}/download",
-                            "stats": update.get("stats", {}),
-                        },
+                        "data": json.dumps(
+                            {
+                                "presentation_id": presentation_id,
+                                "slide_count": presentation.slide_count(),
+                                "download_url": f"/api/v1/presentations/{presentation_id}/download",
+                                "stats": update.get("stats", {}),
+                            }
+                        ),
                     }
 
                 else:
                     # Progress event
                     yield {
                         "event": "progress",
-                        "data": {
-                            "stage": update["stage"],
-                            "progress": update["progress"],
-                            "message": update["message"],
-                        },
+                        "data": json.dumps(
+                            {
+                                "stage": update["stage"],
+                                "progress": update["progress"],
+                                "message": update["message"],
+                            }
+                        ),
                     }
 
         except Exception as e:
             logger.error(f"Stream generation failed: {e}", exc_info=True)
             yield {
                 "event": "error",
-                "data": {"error": str(e)},
+                "data": json.dumps({"error": str(e)}),
             }
 
     return EventSourceResponse(event_generator())

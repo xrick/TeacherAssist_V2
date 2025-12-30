@@ -54,6 +54,7 @@ repos:
       - id: bandit
         args: [-r, backend/app/, -ll]
         files: ^backend/
+        pass_filenames: false
 
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli
@@ -72,6 +73,6 @@ repos:
 # Configuration
 default_language_version:
   python: python3.12
-  node: system
+  node: "22.15.0"
 
 fail_fast: false

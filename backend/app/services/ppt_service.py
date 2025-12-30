@@ -94,6 +94,9 @@ class PPTService:
             if not title:
                 title = schema.get("title", "Untitled Presentation")
 
+            # Ensure title is not None for type checking
+            title_str: str = title if title else "Untitled Presentation"
+
             # Stage 2: Organize content
             logger.info("[2/5] Organizing content...")
             organized = await self.content_organizer.organize(schema)
@@ -108,7 +111,7 @@ class PPTService:
 
             # Stage 5: Generate final structure
             logger.info("[5/5] Generating final structure...")
-            presentation = await self.coder.code(refined, title, author, template)
+            presentation = await self.coder.code(refined, title_str, author, template)
 
             # Log completion
             duration = (datetime.now() - start_time).total_seconds()
@@ -166,6 +169,9 @@ class PPTService:
 
             if not title:
                 title = schema.get("title", "Untitled Presentation")
+
+            # Ensure title is not None for type checking
+            title_str: str = title if title else "Untitled Presentation"
 
             yield {
                 "stage": "schema_extraction",
@@ -225,7 +231,7 @@ class PPTService:
                 "message": "Generating final presentation structure...",
             }
 
-            presentation = await self.coder.code(refined, title, author, template)
+            presentation = await self.coder.code(refined, title_str, author, template)
 
             duration = (datetime.now() - start_time).total_seconds()
 
