@@ -1,0 +1,152 @@
+{
+  "version": "1.0.0",
+  "created_at": "2025-12-30",
+  "description": "Baseline performance metrics for TeacherAssist V2 PPTAgent",
+
+  "performance_targets": {
+    "generation_latency": {
+      "p50_ms": 5000,
+      "p95_ms": 12000,
+      "p99_ms": 20000,
+      "description": "Time to generate complete presentation from markdown"
+    },
+    "throughput": {
+      "presentations_per_minute": 12,
+      "concurrent_requests": 3,
+      "description": "System throughput under normal load"
+    },
+    "resource_usage": {
+      "memory_mb": 512,
+      "cpu_percent": 70,
+      "description": "Expected resource consumption per generation"
+    }
+  },
+
+  "quality_metrics": {
+    "content_accuracy": {
+      "target": 0.95,
+      "description": "Percentage of markdown content correctly transferred to slides"
+    },
+    "layout_quality": {
+      "target": 0.90,
+      "description": "Appropriate layout selection for content types"
+    },
+    "formatting_consistency": {
+      "target": 0.95,
+      "description": "Consistent styling and formatting across slides"
+    }
+  },
+
+  "cache_performance": {
+    "hit_rate": {
+      "l1_memory": 0.85,
+      "l2_redis": 0.70,
+      "l3_disk": 0.50,
+      "description": "Expected cache hit rates for each layer"
+    },
+    "cache_speedup": {
+      "l1_multiplier": 10.0,
+      "l2_multiplier": 3.0,
+      "l3_multiplier": 1.5,
+      "description": "Speed improvement vs regeneration"
+    }
+  },
+
+  "llm_metrics": {
+    "token_usage": {
+      "avg_tokens_per_slide": 300,
+      "max_tokens_per_presentation": 15000,
+      "description": "Expected LLM token consumption"
+    },
+    "cost_estimates": {
+      "cost_per_1k_tokens": 0.002,
+      "avg_cost_per_presentation": 0.03,
+      "daily_budget_usd": 10.0,
+      "description": "Cost management targets"
+    },
+    "quality_scores": {
+      "content_coherence": 0.90,
+      "instruction_following": 0.95,
+      "description": "LLM output quality metrics"
+    }
+  },
+
+  "reliability_targets": {
+    "availability": {
+      "uptime_percent": 99.5,
+      "max_downtime_minutes_per_month": 216,
+      "description": "System availability targets"
+    },
+    "error_rates": {
+      "generation_failure_rate": 0.01,
+      "timeout_rate": 0.005,
+      "description": "Acceptable error rates"
+    },
+    "recovery": {
+      "mttr_minutes": 5,
+      "retry_success_rate": 0.90,
+      "description": "Recovery time and retry effectiveness"
+    }
+  },
+
+  "scalability_limits": {
+    "max_slides_per_presentation": 50,
+    "max_concurrent_generations": 3,
+    "generation_timeout_seconds": 600,
+    "max_file_size_mb": 10,
+    "description": "System operational limits"
+  },
+
+  "test_scenarios": {
+    "scenario_1_basic": {
+      "markdown_file": "test_content_01_basic.md",
+      "expected_slides": 15,
+      "expected_duration_ms": 8000,
+      "template": "default.pptx"
+    },
+    "scenario_2_advanced": {
+      "markdown_file": "test_content_02_advanced.md",
+      "expected_slides": 28,
+      "expected_duration_ms": 15000,
+      "template": "educational.pptx"
+    },
+    "scenario_3_cached": {
+      "markdown_file": "test_content_01_basic.md",
+      "expected_slides": 15,
+      "expected_duration_ms": 800,
+      "cache_layer": "L1",
+      "template": "default.pptx"
+    }
+  },
+
+  "monitoring_thresholds": {
+    "alerts": {
+      "latency_p99_ms": 25000,
+      "error_rate_percent": 5.0,
+      "memory_usage_percent": 85,
+      "cache_hit_rate_l1": 0.70,
+      "daily_cost_usd": 12.0
+    },
+    "critical_alerts": {
+      "consecutive_failures": 3,
+      "availability_percent": 95.0,
+      "memory_usage_percent": 95,
+      "generation_timeout_rate": 0.10
+    }
+  },
+
+  "benchmark_history": {
+    "v1_legacy": {
+      "generation_latency_p50_ms": 12000,
+      "generation_latency_p95_ms": 25000,
+      "cache_hit_rate": 0.30,
+      "notes": "Original synchronous implementation"
+    },
+    "v2_target": {
+      "generation_latency_p50_ms": 5000,
+      "generation_latency_p95_ms": 12000,
+      "cache_hit_rate": 0.85,
+      "notes": "Async + multi-layer cache + optimized prompts"
+    }
+  }
+}

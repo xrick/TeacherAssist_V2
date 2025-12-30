@@ -1,0 +1,47 @@
+# .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+.pnp
+.pnp.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# Data
+backend/data/outputs/*
+backend/data/cache/*
+!backend/data/.gitkeep
+!backend/data/templates/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Environment
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/

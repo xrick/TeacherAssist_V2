@@ -1,3 +1,4 @@
+<!-- docs/pptagent_analysis_and_refactor_only_planA.md -->
 # PPTAgent Analysis & TeacherAssist Refactoring Plan
 
 ## Executive Summary
@@ -101,30 +102,30 @@ class Agent:
         self.cost = Cost()
         self.context_length = 0
         self.context_warning = 0  # Tracks warning state (0, 1, 2)
-        
+
         # Load YAML role config
         config_file = config_file or PACKAGE_DIR / "roles" / f"{self.name}.yaml"
         role_config = RoleConfig(**yaml.safe_load(open(config_file)))
-        
+
         self.llm: LLM = config[role_config.use_model]
         self.prompt: Template = Template(role_config.instruction, undefined=StrictUndefined)
-        
+
         # Disable inspect_slide for non-multimodal models
         if not self.llm.is_multimodal:
             if "inspect_slide" not in role_config.exclude_tools:
                 role_config.exclude_tools.append("inspect_slide")
-        
+
         # Build tool list from server configs
         self.tools = []
         if role_config.include_tool_servers == "all":
             role_config.include_tool_servers = list(agent_env._server_tools)
-        
+
         for server in role_config.include_tool_servers:
             if server not in role_config.exclude_tool_servers:
                 for tool in agent_env._server_tools[server]:
                     if tool not in role_config.exclude_tools:
                         self.tools.append(agent_env._tools_dict[tool])
-        
+
         # Add explicitly included tools
         for tool_name in role_config.include_tools:
             self.tools.append(agent_env._tools_dict[tool_name])
@@ -137,7 +138,7 @@ class Agent:
                 role=Role.USER,
                 content=self.prompt.render(**chat_kwargs),
             ))
-        
+
         # Context budget enforcement
         if self.context_length > CONTEXT_LENGTH_LIMIT:
             raise RuntimeError(f"{self.name} exceeded context budget: {self.context_length}")
@@ -147,12 +148,12 @@ class Agent:
         elif self.context_warning == 1 and self.context_length > CONTEXT_LENGTH_LIMIT * 0.8:
             self.context_warning = 2
             self.chat_history.append(URGENT_NOTICE_MESSAGE)
-        
+
         response = await self.llm.run(messages=self.chat_history, tools=self.tools)
         if response.usage:
             self.cost += response.usage
             self.context_length = response.usage.total_tokens
-        
+
         agent_message = response.choices[0].message
         self.chat_history.append(ChatMessage(
             role=agent_message.role,
@@ -167,7 +168,7 @@ class Agent:
         observations = []
         finish_id = None
         outcome = None
-        
+
         for t in tool_calls:
             arguments = json.loads(t.function.arguments) if t.function.arguments else None
             if t.function.name == "finalize":
@@ -175,16 +176,16 @@ class Agent:
                 finish_id = t.id
                 outcome = arguments["outcome"]
             coros.append(self.agent_env.tool_execute(t, limit_len))
-        
+
         observations = await asyncio.gather(*coros)
         self.chat_history.extend(observations)
-        
+
         # Check if finalize succeeded
         if finish_id:
             for obs in observations:
                 if obs.tool_call_id == finish_id and obs.text == outcome:
                     return obs.text  # Return outcome path, ending the loop
-        
+
         return observations
 
     @abstractmethod
@@ -201,7 +202,7 @@ class PPTAgent(Agent):
     async def loop(self, req: InputRequest, markdown_file: str):
         while True:
             agent_message = await self.action(
-                markdown_file=markdown_file, 
+                markdown_file=markdown_file,
                 prompt=req.pptagent_prompt
             )
             yield agent_message
@@ -240,7 +241,7 @@ class Design(Agent):
     async def loop(self, req: InputRequest, markdown_file: str):
         while True:
             agent_message = await self.action(
-                markdown_file=markdown_file, 
+                markdown_file=markdown_file,
                 prompt=req.webagent_prompt
             )
             yield agent_message
@@ -256,17 +257,39 @@ class Design(Agent):
 ### 0.4 Agent Role Configurations
 
 **Research Agent** (`Research.yaml`):
-```yaml
+```markdown
 system:
   zh: |
-    你是一位专业的幻灯片内容专家，能够利用多种工具进行深度信息检索...
-    <任务说明>
-    1. 系统而全面地开展信息研究，构建具有故事张力的幻灯片框架
-    2. 以信息价值与内容逻辑为导向组织视觉素材
-    3. 撰写 Markdown 格式文稿（使用`---`分页）
-    4. 借助`inspect_manuscript`逐页审查
-    5. 调用`finalize`返回文稿路径
-    </任务说明>
+# 角色
+你是一位投影片內容規劃專家，擅長深度資訊檢索與結構化敘事設計。
+
+# 工作流程
+
+## 1. 研究階段
+- 使用可用工具進行系統性資訊收集
+- 識別核心論點與支撐素材
+
+## 2. 框架設計
+- 建立具敘事張力的投影片結構
+- 以資訊價值和邏輯流暢度組織內容
+
+## 3. 撰寫文稿
+- 輸出 Markdown 格式
+- 使用 `---` 作為分頁符
+
+## 4. 審查與交付
+- 調用 `inspect_manuscript` 逐頁檢視
+- 確認無誤後調用 `finalize` 返回文稿路徑
+
+# 輸出規範
+- 格式：Markdown（`---` 分頁）
+- 必須完成審查流程後才能交付
+
+主要改進：
+- 拆分角色定義與任務流程
+- 以編號步驟明確執行順序
+- 減少冗餘描述，聚焦關鍵動作
+- 工具調用時機更明確
 use_model: research_agent
 include_tool_servers: all
 exclude_tool_servers: [pptagent]
@@ -274,36 +297,74 @@ exclude_tools: [inspect_slide, markdown_table_to_image]
 ```
 
 **Design Agent** (`Design.yaml`):
-```yaml
+```markdown
 system:
   zh: |
-    你是一位专业的幻灯片视觉设计专家，擅长使用 HTML/CSS 进行固定版式设计
-    <任务说明>
-    1. 制定"幻灯片母版"式的设计方案，保存至 design_plan.md
-    2. 逐页生成HTML文件，保存到 slides/slide_{页码:02d}.html
-    3. 生成后必须调用 `inspect_slide` 获取视觉反馈，进行像素级审查
-    4. 调用 `finalize` 返回幻灯片文件夹
-    </任务说明>
-    <风格说明>
-    1. 平面设计原则：禁止网页交互行为
-    2. 强制固定尺寸：body/html 锁定为 1280x720px, overflow: hidden
-    3. 视觉反馈闭环：必须依据 inspect_slide 结果动态调整 CSS
-    </风格说明>
+    # 角色
+你是一位投影片視覺設計專家，使用 HTML/CSS 製作固定版式投影片。
+
+# 設計約束（強制）
+- 尺寸：`html, body { width: 1280px; height: 720px; overflow: hidden; }`
+- 禁止：任何網頁交互元素（hover、click、scroll）
+- 定位：所有元素使用絕對定位或固定布局
+
+# 工作流程
+
+## 1. 設計規劃
+- 制定投影片母版方案（字體、配色、版式規範）
+- 保存至 `design_plan.md`
+
+## 2. 逐頁生成
+- 輸出路徑：`slides/slide_{頁碼:02d}.html`
+- 每頁獨立完整的 HTML 文件
+
+## 3. 視覺審查（必要步驟）
+- 每頁生成後**必須**調用 `inspect_slide` 獲取渲染結果
+- 根據視覺反饋進行像素級調整
+- 重複直至符合設計標準
+
+## 4. 交付
+- 所有頁面審查通過後，調用 `finalize` 返回文件夾路徑
+
+# 輸出結構
+  '''
+  design_plan.md
+  slides/
+    slide_01.html
+    slide_02.html
+    ...
+  '''
 use_model: design_agent
 include_tool_servers: [desktop_commander]
 include_tools: [inspect_slide, thinking, finalize]
 ```
 
 **PPTAgent Agent** (`PPTAgent.yaml`):
-```yaml
+```markdown
 system:
   zh: |
-    你是一位专业的幻灯片制作专家，根据Markdown内容调用工具生成幻灯片
-    <任务说明>
-    1. 理解每页的 Markdown 内容（`---` 分隔）
-    2. 交互式调用工具生成忠实还原的幻灯片
-    3. 使用`finalize`工具返回生成的幻灯片
-    </任务说明>
+   # 角色
+你是一位投影片生成專家，負責將 Markdown 文稿轉換為投影片。
+
+# 輸入格式
+- Markdown 文本，使用 `---` 分隔各頁內容
+
+# 工作流程
+
+## 1. 解析文稿
+- 按 `---` 分割，識別每頁內容
+- 提取標題、正文、列表等結構
+
+## 2. 逐頁生成
+- 依序調用生成工具處理每一頁
+- 確保輸出忠實呈現原始 Markdown 內容
+
+## 3. 交付
+- 全部頁面完成後，調用 `finalize` 返回投影片路徑
+
+# 注意事項
+- 保持內容完整性，不遺漏任何頁面
+- 遵循原文結構，不擅自增刪內容
 use_model: agent
 include_tool_servers: all
 exclude_tools: [todo_create, todo_update, todo_list, get_markdown_overview]
@@ -328,7 +389,7 @@ if __name__ == "__main__":
         import tavily_search    # search_web, search_images
     elif os.getenv("FIRECRAWL_API_KEY"):
         import firecrawl_search # search_web, search_images
-    
+
     mcp.run(show_banner=False)
 ```
 
@@ -363,39 +424,39 @@ def finalize(outcome: str, agent_name: str | None = None) -> str:
     path = Path(outcome)
     if not path.exists():
         return f"Outcome file {outcome} does not exist"
-    
+
     if agent_name == "Research":
         if not (path.is_file() and path.suffix == ".md"):
             return "Outcome file should be a markdown file"
         # Validate all image paths exist, convert to absolute paths
         # Check no external image links
-        
+
     elif agent_name == "PPTAgent":
         if not (path.is_file() and path.suffix == ".pptx"):
             return "Outcome file should be a pptx file"
         if len(Presentation(str(path)).slides) <= 0:
             return "PPTX file should contain at least one slide"
-            
+
     elif agent_name == "Design":
         if not (path.is_dir() and path.stem.startswith("slide")):
             return "Outcome directory should start with 'slide'"
         html_files = list(path.glob("*.html"))
         if not all(f.stem.startswith("slide_") for f in html_files):
             return "All HTML files should start with 'slide_'"
-    
+
     return outcome  # Success - return path to end agent loop
 
 # richfile.py - inspect_slide for visual feedback
 @mcp.tool()
 async def inspect_slide(
-    html_file: str, 
+    html_file: str,
     aspect_ratio: Literal["widescreen", "normal", "A1"] = "widescreen"
 ) -> ImageContent | str:
     """Read the HTML file as an image for visual inspection."""
     async with PlaywrightConverter() as converter:
         await converter.page.goto(f"file://{html_file}", wait_until="domcontentloaded")
         slide_image_folder = await converter.convert_to_pdf([html_file], ...)
-    
+
     with open(slide_image_folder / "slide_01.jpg", "rb") as f:
         return ImageContent(
             type="image",
@@ -410,7 +471,7 @@ async def fetch_url(url: str, body_only: bool = True) -> str:
     async with PlaywrightConverter() as converter:
         await converter.page.goto(url, wait_until="domcontentloaded", timeout=30000)
         html = await converter.page.content()
-    
+
     markdown = markdownify.markdownify(html, heading_style=markdownify.ATX)
     if body_only:
         return extract(html, output_format="markdown", with_metadata=True, ...)
@@ -427,7 +488,7 @@ async def convert_to_markdown(file_path: str, output_folder: str) -> dict | str:
         # Use markitdown for other formats
         result = MarkItDown().convert_local(file_path, keep_data_uris=True)
         markdown = parse_base64_images(result.text_content, output_folder / "images")
-    
+
     return {"success": True, "markdown_file": str(markdown_file), "images": ...}
 ```
 
@@ -445,14 +506,14 @@ class AgentEnv:
     ):
         self.workspace = Path(workspace).absolute()
         self.config: list[MCPServer] = [MCPServer(**s) for s in json.load(open(config_file))]
-        
+
         # Pass workspace-specific variables to MCP client
         self.client = MCPClient(
             WORKSPACE=str(self.workspace),
             WORKSPACE_ID=self.workspace.stem,
         )
         self.cutoff_len = TOOL_CUTOFF_LEN
-        
+
         # Tool registry
         self._tools_dict: dict[str, dict] = {}        # tool_name → OpenAI tool spec
         self._server_tools = defaultdict(list)         # server_name → [tool_names]
@@ -469,7 +530,7 @@ class AgentEnv:
             result = CallToolResult(content=[TextContent(text=f"Tool not found", type="text")], isError=True)
         except TimeoutError:
             result = CallToolResult(content=[TextContent(text=f"Execution timed out", type="text")], isError=True)
-        
+
         # Process result content blocks
         content = []
         for block in result.content:
@@ -483,7 +544,7 @@ class AgentEnv:
                 content.append({"type": "text", "text": text})
             elif block.type == "image":
                 content.append({"type": "image_url", "image_url": {"url": block.data}})
-        
+
         return ChatMessage(role=Role.TOOL, content=content, tool_call_id=tool_call.id, is_error=result.isError)
 
     async def __aenter__(self):
@@ -491,13 +552,13 @@ class AgentEnv:
         # NOTE: Original code has Docker container cleanup here - NOT NEEDED for TeacherAssist
         # Simply create workspace directory
         self.workspace.mkdir(parents=True, exist_ok=True)
-        
+
         # Connect to all servers in parallel
         connect_tasks = []
         for server in self.config:
             connect_tasks.append(self.client.connect_server(server.name, server))
         await asyncio.gather(*connect_tasks)
-        
+
         # Build tool registry from connected servers
         for server in self.config:
             tools_dict = await self.client.list_tools(server.name)
@@ -686,7 +747,7 @@ class DeepPresenterConfig:
 @dataclass
 class AsyncLLM(LLM):
     use_batch: bool = False
-    
+
     async def __call__(
         self,
         content: str,
@@ -781,12 +842,12 @@ async def generate_pres(
 ):
     # 1. Generate outline
     self.outline = await self.generate_outline(num_slides, source_doc)
-    
+
     # 2. Generate slides concurrently
     async with asyncio.TaskGroup() as tg:
         for slide_idx, item in enumerate(self.outline):
             tg.create_task(self.generate_slide(slide_idx, item))
-    
+
     # 3. Build presentation
     return self.build_presentation()
 ```
@@ -796,23 +857,23 @@ async def generate_pres(
 async def generate_slide(self, slide_idx, outline_item):
     # 1. Select layout
     layout, header, content = await self._select_layout(slide_idx, outline_item)
-    
+
     # 2. Generate content (Editor Agent)
     editor_output = await self.staffs["editor"](
         schema=layout.content_schema,
         slide_content=content,
         response_format=EditorOutput.response_model(elements)
     )
-    
+
     # 3. Generate edit commands
     command_list = self._generate_commands(editor_output, layout)
-    
+
     # 4. Execute edits (Coder Agent)
     edit_actions = await self.staffs["coder"](
         api_docs=CodeExecutor.get_apis_docs(API_TYPES.Agent.value),
         command_list=command_list
     )
-    
+
     # 5. Apply edits with retry
     code_executor.execute_actions(edit_actions, edit_slide)
 ```
@@ -1044,7 +1105,7 @@ backend/
 
 from fastapi import APIRouter, BackgroundTasks, WebSocket
 from app.models import (
-    GenerateRequest, GenerateResponse, 
+    GenerateRequest, GenerateResponse,
     ProgressEvent, TemplateInfo
 )
 
@@ -1101,11 +1162,11 @@ class GenerateRequest(BaseModel):
     template_id: str = "default"
     num_slides: int | None = None     # Auto if None
     language: str = "en"
-    
+
     # LLM configuration
     llm_provider: LLMProvider = LLMProvider.OLLAMA
     model_name: str = "gpt-oss:20b"
-    
+
     # Optional customization
     include_images: bool = True
     generate_transcript: bool = False
@@ -1163,9 +1224,9 @@ class PresentationService:
         request: GenerateRequest
     ) -> AsyncGenerator[ProgressEvent, None]:
         """Generate presentation with progress streaming"""
-        
+
         task_id = str(uuid.uuid4())
-        
+
         # 1. Setup LLM
         yield ProgressEvent(
             task_id=task_id,
@@ -1173,12 +1234,12 @@ class PresentationService:
             progress=0.0,
             message="Initializing LLM connection..."
         )
-        
+
         llm = await self.llm_service.get_async_llm(
             provider=request.llm_provider,
             model=request.model_name
         )
-        
+
         # 2. Load template
         yield ProgressEvent(
             task_id=task_id,
@@ -1186,11 +1247,11 @@ class PresentationService:
             progress=0.05,
             message="Loading presentation template..."
         )
-        
+
         template_path = self._get_template_path(request.template_id)
         config = Config(self.output_dir)
         presentation = Presentation.from_file(template_path, config)
-        
+
         # 3. Induct template layouts
         yield ProgressEvent(
             task_id=task_id,
@@ -1198,7 +1259,7 @@ class PresentationService:
             progress=0.1,
             message="Analyzing template layouts..."
         )
-        
+
         inducter = SlideInducter(
             prs=presentation,
             ppt_image_folder=config.IMAGE_DIR,
@@ -1210,7 +1271,7 @@ class PresentationService:
             use_assert=False
         )
         layout_induction = await inducter.layout_induct()
-        
+
         # 4. Setup PPTGen
         yield ProgressEvent(
             task_id=task_id,
@@ -1218,7 +1279,7 @@ class PresentationService:
             progress=0.15,
             message="Preparing generation engine..."
         )
-        
+
         pptgen = PPTGen(
             language_model=llm,
             vision_model=llm,
@@ -1226,7 +1287,7 @@ class PresentationService:
             record_cost=False
         )
         pptgen.set_reference(layout_induction, presentation)
-        
+
         # 5. Generate outline
         yield ProgressEvent(
             task_id=task_id,
@@ -1234,19 +1295,19 @@ class PresentationService:
             progress=0.2,
             message="Generating presentation outline..."
         )
-        
+
         source_doc = Document.from_text(request.content)
         outline = await pptgen.generate_outline(
             num_slides=request.num_slides,
             doc=source_doc
         )
-        
+
         total_slides = len(outline)
-        
+
         # 6. Generate slides
         for i, item in enumerate(outline):
             progress = 0.2 + (0.7 * (i / total_slides))
-            
+
             yield ProgressEvent(
                 task_id=task_id,
                 stage=f"slide_{i+1}",
@@ -1255,10 +1316,10 @@ class PresentationService:
                 current_slide=i+1,
                 total_slides=total_slides
             )
-            
+
             slide, _ = await pptgen.generate_slide(i, item, asyncio.Semaphore(1))
             pptgen.slides.append(slide)
-        
+
         # 7. Build final PPTX
         yield ProgressEvent(
             task_id=task_id,
@@ -1266,13 +1327,13 @@ class PresentationService:
             progress=0.9,
             message="Building final presentation..."
         )
-        
+
         output_path = os.path.join(
             self.output_dir,
             f"{task_id}.pptx"
         )
         pptgen.build_presentation().save(output_path)
-        
+
         # 8. Complete
         yield ProgressEvent(
             task_id=task_id,
@@ -1292,7 +1353,7 @@ from app.pptagent_core.llms import AsyncLLM
 
 class LLMService:
     """Unified LLM provider abstraction"""
-    
+
     PROVIDER_CONFIGS = {
         "ollama": {
             "base_url": "http://localhost:11434/v1",
@@ -1307,14 +1368,14 @@ class LLMService:
             "api_key": None    # From ANTHROPIC_API_KEY env
         }
     }
-    
+
     async def get_async_llm(
         self,
         provider: str,
         model: str
     ) -> AsyncLLM:
         config = self.PROVIDER_CONFIGS[provider]
-        
+
         return AsyncLLM(
             model=model,
             base_url=config["base_url"],
@@ -1437,7 +1498,7 @@ class LLMService:
       </AdvancedOptions>
       <GenerateButton />
     </InputPanel>
-    
+
     <PreviewPanel>
       <SlideCarousel>
         <SlideCard status="complete|generating|pending" />
@@ -1457,7 +1518,7 @@ class LLMService:
 
 ```typescript
 // Generation states with UI feedback
-type GenerationState = 
+type GenerationState =
   | { status: 'idle' }
   | { status: 'validating', message: string }
   | { status: 'initializing', message: string, progress: 0 }
@@ -1492,24 +1553,24 @@ function useGenerationProgress(taskId: string) {
 
   useEffect(() => {
     if (!taskId) return;
-    
+
     const eventSource = new EventSource(`/api/v2/presentations/${taskId}/progress`);
-    
+
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setState(data);
-      
+
       // Update slide preview when a slide completes
       if (data.status === 'generating_slide' && data.slidePreview) {
         setSlides(prev => [...prev, data.slidePreview]);
       }
     };
-    
+
     eventSource.onerror = () => {
       setState({ status: 'error', error: 'Connection lost', retryable: true });
       eventSource.close();
     };
-    
+
     return () => eventSource.close();
   }, [taskId]);
 
@@ -1548,14 +1609,14 @@ function useGenerationProgress(taskId: string) {
   .main-layout {
     flex-direction: column;  /* Stack panels vertically */
   }
-  
+
   .preview-panel {
     position: fixed;
     bottom: 0;
     height: 40vh;  /* Bottom sheet style */
     border-radius: 16px 16px 0 0;
   }
-  
+
   .slide-carousel {
     flex-direction: row;  /* Horizontal scroll */
     overflow-x: auto;
@@ -1573,10 +1634,10 @@ function useGenerationProgress(taskId: string) {
 
 ```tsx
 // Example accessible progress component
-<div 
-  role="progressbar" 
-  aria-valuenow={progress} 
-  aria-valuemin={0} 
+<div
+  role="progressbar"
+  aria-valuenow={progress}
+  aria-valuemin={0}
   aria-valuemax={100}
   aria-label={`Generation progress: ${progress}%`}
 >
@@ -1598,19 +1659,19 @@ const animations = {
     animate: { opacity: 1, y: 0, scale: 1 },
     transition: { duration: 0.3, ease: 'easeOut' }
   },
-  
+
   // Progress bar pulse while generating
   progressPulse: {
     animate: { opacity: [1, 0.7, 1] },
     transition: { duration: 1.5, repeat: Infinity }
   },
-  
+
   // Success checkmark
   checkmarkDraw: {
     pathLength: { from: 0, to: 1 },
     transition: { duration: 0.4, delay: 0.2 }
   },
-  
+
   // Button hover
   buttonHover: {
     scale: 1.02,
@@ -1684,30 +1745,30 @@ export function useGeneration() {
 
   const generate = async (request: GenerateRequest) => {
     setState({ status: 'validating', message: 'Validating input...' });
-    
+
     try {
       // Start generation
       const { data } = await api.post('/api/v2/presentations/generate', request);
       setTaskId(data.task_id);
-      
+
       // Connect to SSE for progress
       const eventSource = new EventSource(
         `/api/v2/presentations/${data.task_id}/progress`
       );
-      
+
       eventSource.onmessage = (event) => {
         const progress = JSON.parse(event.data);
         setState(progress);
-        
+
         if (progress.slidePreview) {
           setSlides(prev => [...prev, progress.slidePreview]);
         }
-        
+
         if (progress.status === 'complete' || progress.status === 'error') {
           eventSource.close();
         }
       };
-      
+
     } catch (error) {
       setState({ status: 'error', error: error.message, retryable: true });
     }
@@ -1730,7 +1791,7 @@ export function ContentEditor({ value, onChange }: ContentEditorProps) {
   const handleDrop = async (e: DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    
+
     const file = e.dataTransfer.files[0];
     if (file) {
       setMode('file');
@@ -1785,7 +1846,7 @@ You can use markdown formatting:
 // components/preview/ProgressBar.tsx - Animated progress
 export function GenerationProgressBar({ state }: { state: GenerationState }) {
   const config = statusConfig[state.status];
-  
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
@@ -1797,7 +1858,7 @@ export function GenerationProgressBar({ state }: { state: GenerationState }) {
           <span className="font-mono">{Math.round(state.progress)}%</span>
         )}
       </div>
-      
+
       <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
         <motion.div
           className={cn("absolute h-full rounded-full", `bg-${config.color}-500`)}
@@ -1805,7 +1866,7 @@ export function GenerationProgressBar({ state }: { state: GenerationState }) {
           animate={{ width: `${state.progress || 0}%` }}
           transition={{ duration: 0.3, ease: "easeOut" }}
         />
-        
+
         {state.status === 'generating_slide' && (
           <motion.div
             className="absolute h-full w-20 bg-gradient-to-r from-transparent via-white/20 to-transparent"
@@ -1814,7 +1875,7 @@ export function GenerationProgressBar({ state }: { state: GenerationState }) {
           />
         )}
       </div>
-      
+
       {state.slideNumber && state.totalSlides && (
         <p className="text-xs text-muted-foreground text-right">
           Slide {state.slideNumber} of {state.totalSlides}
@@ -1837,14 +1898,14 @@ export function SlideCarousel({ slides, activeIndex }: SlideCarouselProps) {
             transition={{ delay: i * 0.1 }}
             className="snap-center"
           >
-            <SlideCard 
-              slide={slide} 
+            <SlideCard
+              slide={slide}
               index={i + 1}
               isActive={i === activeIndex}
             />
           </motion.div>
         ))}
-        
+
         {/* Generating placeholder */}
         {slides.length > 0 && (
           <div className="flex-shrink-0 w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
