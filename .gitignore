@@ -47,6 +47,3 @@ Thumbs.db
 coverage/
 .nyc_output/
 .pids/
-backend/data/templates/ML_colorful.pptx
-backend/data/templates/Reading_colorful.pptx
-refData/testdata/K-means_Clustering.md
