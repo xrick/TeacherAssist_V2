@@ -14,7 +14,10 @@ from app.api.schemas.generation import (
     GenerationRequest,
     GenerationResponse,
 )
+from app.core.config import settings
 from app.services.ppt_service import PPTService, get_ppt_service
+from app.services.pptx_builder import PPTXBuilder
+from app.services.presentation_storage import PresentationStorage, get_presentation_storage
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,7 @@ router = APIRouter(prefix="/api/v1/generate", tags=["generation"])
 async def generate_presentation(
     request: GenerationRequest,
     ppt_service: PPTService = Depends(get_ppt_service),
+    storage: PresentationStorage = Depends(get_presentation_storage),
 ) -> GenerationResponse:
     """
     Generate a presentation from markdown content
@@ -44,6 +48,7 @@ async def generate_presentation(
     try:
         logger.info(f"Generating presentation: {request.title or 'Untitled'}")
 
+        # Generate presentation model
         presentation = await ppt_service.generate_presentation(
             markdown_content=request.markdown_content,
             title=request.title,
@@ -53,7 +58,22 @@ async def generate_presentation(
             tone=request.tone,
         )
 
+        # Build PPTX file
+        template_path = None
+        if request.template:
+            template_path = settings.template_storage_path / f"{request.template}.pptx"
+            if not template_path.exists():
+                template_path = None
+                logger.warning(f"Template not found: {request.template}, using default")
+
+        builder = PPTXBuilder(template_path)
+        pptx_bytes = builder.build(presentation)
+
+        # Save to storage
         presentation_id = str(uuid.uuid4())
+        await storage.save_presentation(presentation_id, presentation, pptx_bytes)
+
+        logger.info(f"Presentation saved: {presentation_id}")
 
         return GenerationResponse(
             success=True,
@@ -81,6 +101,7 @@ async def generate_presentation(
 async def generate_presentation_stream(
     request: GenerationRequest,
     ppt_service: PPTService = Depends(get_ppt_service),
+    storage: PresentationStorage = Depends(get_presentation_storage),
 ):
     """
     Generate a presentation with Server-Sent Events (SSE) progress updates
@@ -106,6 +127,8 @@ async def generate_presentation_stream(
     data: {"error": "..."}
     ```
     """
+    # Capture storage in closure
+    presentation_storage = storage
 
     async def event_generator() -> AsyncGenerator[dict, None]:
         """Generate SSE events for progress updates"""
@@ -129,19 +152,49 @@ async def generate_presentation_stream(
                     break
 
                 elif "result" in update:
-                    # Completion event
+                    # Completion event - build and save PPTX
                     presentation = update["result"]
-                    yield {
-                        "event": "complete",
-                        "data": json.dumps(
-                            {
-                                "presentation_id": presentation_id,
-                                "slide_count": presentation.slide_count(),
-                                "download_url": f"/api/v1/presentations/{presentation_id}/download",
-                                "stats": update.get("stats", {}),
-                            }
-                        ),
-                    }
+
+                    try:
+                        # Build PPTX file
+                        template_path = None
+                        if request.template:
+                            template_path = (
+                                settings.template_storage_path / f"{request.template}.pptx"
+                            )
+                            if not template_path.exists():
+                                template_path = None
+
+                        builder = PPTXBuilder(template_path)
+                        pptx_bytes = builder.build(presentation)
+
+                        # Save to storage
+                        await presentation_storage.save_presentation(
+                            presentation_id, presentation, pptx_bytes
+                        )
+
+                        logger.info(f"Presentation saved: {presentation_id}")
+
+                        yield {
+                            "event": "complete",
+                            "data": json.dumps(
+                                {
+                                    "presentation_id": presentation_id,
+                                    "slide_count": presentation.slide_count(),
+                                    "download_url": f"/api/v1/presentations/{presentation_id}/download",
+                                    "stats": update.get("stats", {}),
+                                }
+                            ),
+                        }
+
+                    except Exception as build_error:
+                        logger.error(f"Failed to build/save PPTX: {build_error}", exc_info=True)
+                        yield {
+                            "event": "error",
+                            "data": json.dumps(
+                                {"error": f"Failed to save presentation: {build_error}"}
+                            ),
+                        }
 
                 else:
                     # Progress event

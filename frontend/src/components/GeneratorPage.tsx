@@ -1,44 +1,46 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { templateAPI } from '@/api/client'
-import { useSSE } from '@/hooks/useSSE'
-import type { GenerationRequest, Template } from '@/types/api'
-import MarkdownEditor from './input/MarkdownEditor'
-import TemplateGallery from './template/TemplateGallery'
-import GenerationControl from './generation/GenerationControl'
-import ProgressMonitor from './generation/ProgressMonitor'
-import ResultPreview from './preview/ResultPreview'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { templateAPI } from "@/api/client";
+import { useSSE } from "@/hooks/useSSE";
+import type { GenerationRequest, Template } from "@/types/api";
+import MarkdownEditor from "./input/MarkdownEditor";
+import TemplateGallery from "./template/TemplateGallery";
+import GenerationControl from "./generation/GenerationControl";
+import ProgressMonitor from "./generation/ProgressMonitor";
+import ResultPreview from "./preview/ResultPreview";
 
 export default function GeneratorPage() {
-  const [markdown, setMarkdown] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [markdown, setMarkdown] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null,
+  );
   const [generationOptions, setGenerationOptions] = useState({
-    title: '',
-    author: '',
-    audience: '',
-    tone: 'professional',
-  })
+    title: "",
+    author: "",
+    audience: "",
+    tone: "professional",
+  });
 
-  const sseState = useSSE()
+  const sseState = useSSE();
 
   // Fetch templates
   const { data: templatesData, isLoading: templatesLoading } = useQuery({
-    queryKey: ['templates'],
+    queryKey: ["templates"],
     queryFn: () => templateAPI.list(),
-  })
+  });
 
   const handleGenerate = () => {
     const request: GenerationRequest = {
       markdown_content: markdown,
       title: generationOptions.title || undefined,
       author: generationOptions.author || undefined,
-      template: selectedTemplate?.id || 'default',
+      template: selectedTemplate?.id || "default",
       audience: generationOptions.audience || undefined,
       tone: generationOptions.tone || undefined,
-    }
+    };
 
-    sseState.startGeneration(request)
-  }
+    sseState.startGeneration(request);
+  };
 
   return (
     <div className="min-h-screen">
@@ -49,7 +51,7 @@ export default function GeneratorPage() {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg"></div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                TeacherAssist V2
+                TeacherAssist
               </h1>
               <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
                 Beta
@@ -96,7 +98,9 @@ export default function GeneratorPage() {
             />
 
             {/* Progress Monitor */}
-            {(sseState.isGenerating || sseState.progress || sseState.result) && (
+            {(sseState.isGenerating ||
+              sseState.progress ||
+              sseState.result) && (
               <ProgressMonitor
                 progress={sseState.progress}
                 result={sseState.result}
@@ -112,7 +116,7 @@ export default function GeneratorPage() {
               <ResultPreview
                 result={sseState.result}
                 onDownload={() => {
-                  window.open(sseState.result!.download_url, '_blank')
+                  window.open(sseState.result!.download_url, "_blank");
                 }}
                 onReset={sseState.reset}
               />
@@ -121,5 +125,5 @@ export default function GeneratorPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }
