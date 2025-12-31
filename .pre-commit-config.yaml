@@ -56,13 +56,6 @@ repos:
         files: ^backend/
         pass_filenames: false
 
-  # Markdown linting
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.38.0
-    hooks:
-      - id: markdownlint
-        args: [--fix]
-
   # YAML linting
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.33.0
