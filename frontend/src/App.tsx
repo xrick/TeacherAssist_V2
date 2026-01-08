@@ -1,5 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
-import GeneratorPage from './components/GeneratorPage'
+// frontend/src/App.tsx
+import { Routes, Route } from "react-router-dom";
+import GeneratorPage from "./components/GeneratorPage";
 
 function App() {
   return (
@@ -8,7 +9,7 @@ function App() {
         <Route path="/" element={<GeneratorPage />} />
       </Routes>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
