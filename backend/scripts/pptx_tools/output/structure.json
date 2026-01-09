@@ -1,0 +1,169 @@
+{
+  "source_file": "working.pptx",
+  "slide_count": 10,
+  "slides": [
+    {
+      "index": 0,
+      "layout": "Title Slide",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "SUBTITLE",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "layout": "Title, Content",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "TITLE",
+          "content": ""
+        },
+        {
+          "idx": 0,
+          "type": "CONTENT",
+          "content": [],
+          "format": "bullet_list"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "layout": "Centered Text",
+      "placeholders": [
+        {
+          "idx": 0,
+          "type": "SUBTITLE",
+          "content": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "source_file": "working.pptx",
+  "slide_count": 10,
+  "slides": [
+    {
+      "index": 0,
+      "layout": "Title Slide",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "機器學習入門"},
+        {"idx": 1, "type": "SUBTITLE", "content": "從資料到智慧的旅程"}
+      ]
+    },
+    {
+      "index": 1,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "什麼是機器學習？"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "讓電腦從資料中自動學習規律",
+          "不需要明確編寫規則",
+          "應用：推薦系統、語音辨識、自駕車"
+        ]}
+      ]
+    },
+    {
+      "index": 2,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "三大學習類型"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "監督式學習：有標籤資料（分類、迴歸）",
+          "非監督式學習：無標籤資料（分群、降維）",
+          "強化學習：透過獎懲學習（遊戲 AI、機器人）"
+        ]}
+      ]
+    },
+    {
+      "index": 3,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "監督式學習"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "輸入：特徵 (Features) + 標籤 (Labels)",
+          "目標：學習輸入到輸出的映射函數",
+          "常見演算法：線性迴歸、決策樹、SVM、神經網路"
+        ]}
+      ]
+    },
+    {
+      "index": 4,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "模型訓練流程"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "1. 資料收集與清理",
+          "2. 特徵工程與選擇",
+          "3. 模型選擇與訓練",
+          "4. 評估與調參",
+          "5. 部署與監控"
+        ]}
+      ]
+    },
+    {
+      "index": 5,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "過擬合與欠擬合"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "過擬合：模型過於複雜，只會背答案",
+          "欠擬合：模型過於簡單，學不到規律",
+          "解法：正規化、交叉驗證、早停法"
+        ]}
+      ]
+    },
+    {
+      "index": 6,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "深度學習簡介"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "多層神經網路的機器學習方法",
+          "自動學習特徵表示",
+          "突破：影像辨識、自然語言處理、生成式 AI"
+        ]}
+      ]
+    },
+    {
+      "index": 7,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "常用工具與框架"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "Python：NumPy、Pandas、Scikit-learn",
+          "深度學習：TensorFlow、PyTorch",
+          "雲端平台：AWS SageMaker、Google Vertex AI"
+        ]}
+      ]
+    },
+    {
+      "index": 8,
+      "layout": "Title, Content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "實務應用案例"},
+        {"idx": 1, "type": "CONTENT", "format": "bullet_list", "content": [
+          "Netflix 推薦系統：協同過濾",
+          "Google 翻譯：Transformer 架構",
+          "Tesla 自駕：電腦視覺 + 強化學習"
+        ]}
+      ]
+    },
+    {
+      "index": 9,
+      "layout": "Centered Text",
+      "placeholders": [
+        {"idx": 0, "type": "SUBTITLE", "content": "謝謝聆聽！歡迎提問"}
+      ]
+    }
+  ]
+}
