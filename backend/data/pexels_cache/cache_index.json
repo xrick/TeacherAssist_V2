@@ -102,5 +102,31 @@
     "cached_at": "2026-01-09T04:21:05.167391",
     "expires_at": "2026-01-16T04:21:05.167391",
     "file_size_bytes": 53754
+  },
+  "\u6a5f\u5668\u5b78\u7fd2\u6982\u8ad6_31413052": {
+    "image_id": 31413052,
+    "keyword": "\u6a5f\u5668\u5b78\u7fd2\u6982\u8ad6",
+    "file_path": "data/pexels_cache/\u6a5f\u5668\u5b78\u7fd2\u6982\u8ad6/31413052.jpg",
+    "original_url": "https://images.pexels.com/photos/31413052/pexels-photo-31413052.jpeg",
+    "photographer": "nana liu",
+    "photographer_url": "https://www.pexels.com/@nana-llj",
+    "pexels_url": "https://www.pexels.com/photo/modern-entrance-with-water-coolers-and-signage-31413052/",
+    "alt_text": "Entrance with stacked water coolers, modern architecture, and restroom signage.",
+    "cached_at": "2026-01-09T06:05:14.031493",
+    "expires_at": "2026-01-16T06:05:14.031493",
+    "file_size_bytes": 50538
+  },
+  "\u61c9\u7528\u9818\u57df_31413052": {
+    "image_id": 31413052,
+    "keyword": "\u61c9\u7528\u9818\u57df",
+    "file_path": "data/pexels_cache/\u61c9\u7528\u9818\u57df/31413052.jpg",
+    "original_url": "https://images.pexels.com/photos/31413052/pexels-photo-31413052.jpeg",
+    "photographer": "nana liu",
+    "photographer_url": "https://www.pexels.com/@nana-llj",
+    "pexels_url": "https://www.pexels.com/photo/modern-entrance-with-water-coolers-and-signage-31413052/",
+    "alt_text": "Entrance with stacked water coolers, modern architecture, and restroom signage.",
+    "cached_at": "2026-01-09T06:06:01.108681",
+    "expires_at": "2026-01-16T06:06:01.108681",
+    "file_size_bytes": 50538
   }
 }
