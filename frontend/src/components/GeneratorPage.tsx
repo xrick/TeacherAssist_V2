@@ -7,7 +7,7 @@ import MarkdownEditor from "./input/MarkdownEditor";
 import TemplateGallery from "./template/TemplateGallery";
 import GenerationControl from "./generation/GenerationControl";
 import ProgressMonitor from "./generation/ProgressMonitor";
-import ResultPreview from "./preview/ResultPreview";
+import { ResultTabs } from "./result";
 
 export default function GeneratorPage() {
   const [markdown, setMarkdown] = useState("");
@@ -69,16 +69,25 @@ export default function GeneratorPage() {
       {/* Main Content */}
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Editor */}
+          {/* Left Column - Editor & Generation Controls */}
           <div className="space-y-6">
             <MarkdownEditor
               value={markdown}
               onChange={setMarkdown}
               disabled={sseState.isGenerating}
             />
+
+            {/* Generation Controls - moved below Markdown Editor */}
+            <GenerationControl
+              options={generationOptions}
+              onOptionsChange={setGenerationOptions}
+              onGenerate={handleGenerate}
+              disabled={!markdown.trim() || sseState.isGenerating}
+              isGenerating={sseState.isGenerating}
+            />
           </div>
 
-          {/* Right Column - Templates & Controls */}
+          {/* Right Column - Templates & Progress */}
           <div className="space-y-6">
             {/* Template Gallery */}
             <TemplateGallery
@@ -88,41 +97,25 @@ export default function GeneratorPage() {
               loading={templatesLoading}
             />
 
-            {/* Generation Controls */}
-            <GenerationControl
-              options={generationOptions}
-              onOptionsChange={setGenerationOptions}
-              onGenerate={handleGenerate}
-              disabled={!markdown.trim() || sseState.isGenerating}
-              isGenerating={sseState.isGenerating}
-            />
-
             {/* Progress Monitor */}
-            {(sseState.isGenerating ||
-              sseState.progress ||
-              sseState.result) && (
-              <ProgressMonitor
-                progress={sseState.progress}
-                result={sseState.result}
-                error={sseState.error}
-                isGenerating={sseState.isGenerating}
-                onReset={sseState.reset}
-                onStop={sseState.stopGeneration}
-              />
-            )}
-
-            {/* Result Preview */}
-            {sseState.result && (
-              <ResultPreview
-                result={sseState.result}
-                onDownload={() => {
-                  window.open(sseState.result!.download_url, "_blank");
-                }}
-                onReset={sseState.reset}
-              />
-            )}
+            {(sseState.isGenerating || sseState.progress) &&
+              !sseState.result && (
+                <ProgressMonitor
+                  progress={sseState.progress}
+                  result={sseState.result}
+                  error={sseState.error}
+                  isGenerating={sseState.isGenerating}
+                  onReset={sseState.reset}
+                  onStop={sseState.stopGeneration}
+                />
+              )}
           </div>
         </div>
+
+        {/* Result Tabs - Full Width Below */}
+        {sseState.result && (
+          <ResultTabs result={sseState.result} onReset={sseState.reset} />
+        )}
       </main>
     </div>
   );

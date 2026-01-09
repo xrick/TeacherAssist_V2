@@ -10,9 +10,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import generation, health, presentations, templates
+from app.api.routes import generation, health, pexels, presentations, scripts, templates
 from app.core.config import settings
 from app.services.llm_service import shutdown_llm_service
+from app.services.pexels_service import shutdown_pexels_service
 
 # Configure logging
 logging.basicConfig(
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
     await shutdown_llm_service()
+    await shutdown_pexels_service()
     logger.info("Shutdown complete")
 
 
@@ -61,6 +63,8 @@ app.include_router(health.router)
 app.include_router(generation.router)
 app.include_router(templates.router)
 app.include_router(presentations.router)
+app.include_router(pexels.router)
+app.include_router(scripts.router)
 
 
 @app.get("/")

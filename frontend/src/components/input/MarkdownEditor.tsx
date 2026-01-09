@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 interface MarkdownEditorProps {
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEditorProps) {
-  const [showPreview, setShowPreview] = useState(false)
+export default function MarkdownEditor({
+  value,
+  onChange,
+  disabled,
+}: MarkdownEditorProps) {
+  const [showPreview, setShowPreview] = useState(false);
 
   const exampleMarkdown = `# 簡報標題
 
@@ -30,11 +34,11 @@ export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEd
 ## 結論
 
 總結要點
-`
+`;
 
   const handleInsertExample = () => {
-    onChange(exampleMarkdown)
-  }
+    onChange(exampleMarkdown);
+  };
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -43,7 +47,7 @@ export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEd
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Markdown 內容
+              Markdown/Text 內容
             </h3>
             <span className="text-xs text-slate-500 dark:text-slate-400">
               ({value.length} 字元)
@@ -62,11 +66,11 @@ export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEd
               onClick={() => setShowPreview(!showPreview)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 showPreview
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
-              {showPreview ? '編輯' : '預覽'}
+              {showPreview ? "編輯" : "預覽"}
             </button>
           </div>
         </div>
@@ -77,9 +81,15 @@ export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEd
         {showPreview ? (
           <div className="p-6 prose dark:prose-invert max-w-none h-[600px] overflow-y-auto">
             {value ? (
-              <div dangerouslySetInnerHTML={{ __html: value.replace(/\n/g, '<br />') }} />
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: value.replace(/\n/g, "<br />"),
+                }}
+              />
             ) : (
-              <p className="text-slate-400 dark:text-slate-600 italic">尚無內容...</p>
+              <p className="text-slate-400 dark:text-slate-600 italic">
+                尚無內容...
+              </p>
             )}
           </div>
         ) : (
@@ -102,5 +112,5 @@ export default function MarkdownEditor({ value, onChange, disabled }: MarkdownEd
         </div>
       </div>
     </div>
-  )
+  );
 }

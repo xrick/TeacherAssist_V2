@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     daily_cost_budget_usd: float = 10.0
     cost_per_1k_tokens: float = 0.002
 
+    # Pexels API Configuration
+    pexels_api_key: str = ""
+    pexels_cache_path: Path = Path("data/pexels_cache")
+    pexels_cache_ttl_days: int = 7
+    pexels_default_per_page: int = 9
+
 
 # Global settings instance
 settings = Settings()

@@ -9,12 +9,15 @@ import logging
 from pathlib import Path
 
 from pptagent_pptx import Presentation as PPTXPresentation
+from pptagent_pptx.util import Inches
 
 from app.pptagent_core.presentation.models import (
     ContentType,
+    ImagePosition,
     LayoutType,
     Presentation,
     SlideContent,
+    SlideImage,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +42,23 @@ class PPTXBuilder:
         LayoutType.CLOSING: 0,  # Title Slide (reuse for closing)
         LayoutType.BLANK: 6,  # Blank
     }
+
+    # Default image position by layout type
+    LAYOUT_IMAGE_POSITION = {
+        LayoutType.TITLE: ImagePosition.CENTER,
+        LayoutType.SECTION_HEADER: ImagePosition.BACKGROUND,
+        LayoutType.CONTENT: ImagePosition.RIGHT,
+        LayoutType.TWO_COLUMN: ImagePosition.CENTER,
+        LayoutType.IMAGE: ImagePosition.CENTER,
+        LayoutType.IMAGE_TEXT: ImagePosition.LEFT,
+        LayoutType.QUOTE: ImagePosition.BACKGROUND,
+        LayoutType.CLOSING: ImagePosition.CENTER,
+        LayoutType.BLANK: ImagePosition.CENTER,
+    }
+
+    # Standard slide dimensions (in inches) - 16:9 widescreen
+    SLIDE_WIDTH = 13.333
+    SLIDE_HEIGHT = 7.5
 
     def __init__(self, template_path: Path | None = None):
         """
@@ -145,10 +165,26 @@ class PPTXBuilder:
                     p.text = line.strip()
                     p.level = 0
 
-        # Add speaker notes if present
+        # Add images if present
+        if slide_content.images:
+            for image in slide_content.images:
+                self._add_image_to_slide(slide, image, slide_content.layout)
+
+        # Build notes with image attribution
+        notes_parts = []
         if slide_content.notes:
+            notes_parts.append(slide_content.notes)
+
+        # Add image attributions to notes
+        if slide_content.images:
+            notes_parts.append("\n--- Image Credits ---")
+            for image in slide_content.images:
+                attribution = f"Photo by {image.photographer} on Pexels ({image.pexels_url})"
+                notes_parts.append(attribution)
+
+        if notes_parts:
             notes_slide = slide.notes_slide
-            notes_slide.notes_text_frame.text = slide_content.notes
+            notes_slide.notes_text_frame.text = "\n".join(notes_parts)
 
         logger.debug(f"Added slide {index + 1}: {slide_content.title[:30]}...")
 
@@ -212,6 +248,122 @@ class PPTXBuilder:
                 lines.append(content)
 
         return "\n".join(lines)
+
+    def _add_image_to_slide(
+        self,
+        slide,
+        image: SlideImage,
+        layout: LayoutType,
+    ):
+        """
+        Add an image to a slide.
+
+        Args:
+            slide: PPTX slide object
+            image: SlideImage with file path and metadata
+            layout: Slide layout type for position determination
+        """
+        image_path = Path(image.file_path)
+        if not image_path.exists():
+            logger.warning(f"Image file not found: {image_path}")
+            return
+
+        # Determine position
+        position = image.position
+        if position == ImagePosition.AUTO:
+            position = self.LAYOUT_IMAGE_POSITION.get(layout, ImagePosition.RIGHT)
+
+        # Calculate image dimensions and position based on layout
+        left, top, width, height = self._calculate_image_bounds(position, layout)
+
+        try:
+            slide.shapes.add_picture(
+                str(image_path),
+                Inches(left),
+                Inches(top),
+                width=Inches(width),
+                height=Inches(height),
+            )
+            logger.debug(
+                f"Added image {image.image_id} at position {position.value} "
+                f"({width:.1f}x{height:.1f} inches)"
+            )
+        except Exception as e:
+            logger.error(f"Failed to add image to slide: {e}")
+
+    def _calculate_image_bounds(
+        self,
+        position: ImagePosition,
+        layout: LayoutType,
+    ) -> tuple[float, float, float, float]:
+        """
+        Calculate image bounds (left, top, width, height) in inches.
+
+        Args:
+            position: Image position on slide
+            layout: Slide layout type
+
+        Returns:
+            Tuple of (left, top, width, height) in inches
+        """
+        # Margins and common dimensions
+        margin = 0.5
+        title_height = 1.2  # Space for title
+
+        # Available space after margins
+        available_width = self.SLIDE_WIDTH - (2 * margin)
+        available_height = self.SLIDE_HEIGHT - title_height - margin
+
+        if position == ImagePosition.RIGHT:
+            # Right side: 40% of width, full available height
+            width = available_width * 0.4
+            height = available_height * 0.8
+            left = self.SLIDE_WIDTH - margin - width
+            top = title_height + (available_height - height) / 2
+
+        elif position == ImagePosition.LEFT:
+            # Left side: 40% of width
+            width = available_width * 0.4
+            height = available_height * 0.8
+            left = margin
+            top = title_height + (available_height - height) / 2
+
+        elif position == ImagePosition.TOP:
+            # Top area: 60% width, 40% height
+            width = available_width * 0.6
+            height = available_height * 0.4
+            left = (self.SLIDE_WIDTH - width) / 2
+            top = title_height
+
+        elif position == ImagePosition.BOTTOM:
+            # Bottom area: 60% width, 40% height
+            width = available_width * 0.6
+            height = available_height * 0.4
+            left = (self.SLIDE_WIDTH - width) / 2
+            top = self.SLIDE_HEIGHT - margin - height
+
+        elif position == ImagePosition.CENTER:
+            # Center: 50% of available space
+            width = available_width * 0.5
+            height = available_height * 0.6
+            left = (self.SLIDE_WIDTH - width) / 2
+            top = title_height + (available_height - height) / 2
+
+        elif position == ImagePosition.BACKGROUND:
+            # Full slide background
+            width = self.SLIDE_WIDTH
+            height = self.SLIDE_HEIGHT
+            left = 0
+            top = 0
+
+        else:
+            # Default to right
+            width = available_width * 0.4
+            height = available_height * 0.8
+            left = self.SLIDE_WIDTH - margin - width
+            top = title_height + (available_height - height) / 2
+
+        return left, top, width, height
 
 
 # Singleton instance

@@ -37,6 +37,30 @@ class ContentType(str, Enum):
     HEADING = "heading"
 
 
+class ImagePosition(str, Enum):
+    """Image position on slide"""
+
+    AUTO = "auto"  # Automatically determined by layout
+    LEFT = "left"
+    RIGHT = "right"
+    TOP = "top"
+    BOTTOM = "bottom"
+    BACKGROUND = "background"
+    CENTER = "center"
+
+
+class SlideImage(BaseModel):
+    """Image information for a slide"""
+
+    image_id: int = Field(..., description="Pexels image ID")
+    file_path: str = Field(..., description="Local file path to cached image")
+    keyword: str = Field(..., description="Search keyword used")
+    photographer: str = Field(..., description="Photographer name")
+    pexels_url: str = Field(..., description="Pexels page URL for attribution")
+    alt_text: str = Field(default="", description="Image alt text")
+    position: ImagePosition = Field(default=ImagePosition.AUTO)
+
+
 class ContentElement(BaseModel):
     """A single content element"""
 
@@ -53,6 +77,7 @@ class SlideContent(BaseModel):
     notes: str | None = None
     layout: LayoutType = LayoutType.CONTENT
     metadata: dict[str, Any] = Field(default_factory=dict)
+    images: list[SlideImage] = Field(default_factory=list, description="Images for this slide")
 
 
 class PresentationMetadata(BaseModel):

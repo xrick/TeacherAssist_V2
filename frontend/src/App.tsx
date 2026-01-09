@@ -1,6 +1,9 @@
 // frontend/src/App.tsx
 import { Routes, Route } from "react-router-dom";
 import GeneratorPage from "./components/GeneratorPage";
+import "@/styles/image-picker.css";
+import "@/components/script/script-editor.css";
+import "@/components/result/result-tabs.css";
 
 function App() {
   return (

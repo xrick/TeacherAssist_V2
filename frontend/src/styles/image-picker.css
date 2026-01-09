@@ -1,0 +1,421 @@
+/**
+ * Image Picker Styles
+ *
+ * Styles for ImagePicker and SlideImageEditor components.
+ */
+
+/* Image Picker Container */
+.image-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 8px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Search Form */
+.image-picker-search {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.image-picker-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.image-picker-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.image-picker-search-btn,
+.image-picker-close-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.image-picker-search-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.image-picker-search-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.image-picker-search-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.image-picker-close-btn {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.image-picker-close-btn:hover {
+  background: #cbd5e1;
+}
+
+/* Error Message */
+.image-picker-error {
+  padding: 0.75rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
+/* Results Info */
+.image-picker-info {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Image Grid */
+.image-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .image-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .image-picker-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Image Item */
+.image-picker-item {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.image-picker-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.image-picker-item.selected {
+  ring: 3px solid #3b82f6;
+  box-shadow: 0 0 0 3px #3b82f6;
+}
+
+.image-picker-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Item Overlay */
+.image-picker-item-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-picker-item:hover .image-picker-item-overlay {
+  opacity: 1;
+}
+
+.image-picker-photographer {
+  font-size: 0.75rem;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.image-picker-preview-btn {
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.image-picker-preview-btn:hover {
+  background: white;
+}
+
+/* Selected Badge */
+.image-picker-selected-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #3b82f6;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Empty State */
+.image-picker-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+/* Pagination */
+.image-picker-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.image-picker-pagination button {
+  padding: 0.5rem 1rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.image-picker-pagination button:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.image-picker-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Preview Modal */
+.image-picker-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.image-picker-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-picker-modal-content img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.image-picker-modal-info {
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.image-picker-modal-info p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.image-picker-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.image-picker-modal-actions button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.image-picker-modal-actions button:first-child {
+  background: #3b82f6;
+  color: white;
+}
+
+.image-picker-modal-actions button:last-child {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* Slide Image Editor */
+.slide-image-editor {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.slide-image-editor-header h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.slide-image-editor-current {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.slide-image-editor-thumbnail {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.slide-image-editor-info {
+  flex: 1;
+}
+
+.slide-image-editor-info p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.keyword-tag {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.slide-image-editor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slide-image-editor-actions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-change {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-change:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-remove {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-remove:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.btn-add {
+  background: #10b981;
+  color: white;
+}
+
+.btn-add:hover:not(:disabled) {
+  background: #059669;
+}
+
+.slide-image-editor-empty {
+  text-align: center;
+  padding: 2rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.slide-image-editor-empty p {
+  margin: 0 0 1rem 0;
+  color: #64748b;
+}
+
+.slide-image-editor-loading {
+  text-align: center;
+  padding: 1rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.slide-image-editor-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.slide-image-editor-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow: hidden;
+}
