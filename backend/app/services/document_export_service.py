@@ -11,6 +11,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 from app.core.config import settings
 from app.services.script_service import PresentationScript, SlideScript
@@ -58,9 +59,9 @@ class ScriptPDF(FPDF):
         if font_path:
             try:
                 # fpdf2 supports TTF/TTC fonts with Unicode
-                self.add_font("NotoSansCJK", "", font_path, uni=True)
-                self.add_font("NotoSansCJK", "B", font_path, uni=True)
-                self.add_font("NotoSansCJK", "I", font_path, uni=True)
+                self.add_font("NotoSansCJK", "", font_path)
+                self.add_font("NotoSansCJK", "B", font_path)
+                self.add_font("NotoSansCJK", "I", font_path)
                 self._chinese_font_loaded = True
                 logger.info(f"Chinese font loaded: {font_path}")
             except Exception as e:
@@ -94,8 +95,7 @@ class ScriptPDF(FPDF):
         self.set_text_color(128, 128, 128)
         # Truncate title for header
         display_title = self.title[:50] if len(self.title) > 50 else self.title
-        self.cell(0, 10, display_title, align="L")
-        self.ln(5)
+        self.cell(0, 10, display_title, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.set_draw_color(200, 200, 200)
         self.line(10, self.get_y(), 200, self.get_y())
         self.ln(5)
@@ -156,22 +156,37 @@ class DocumentExportService:
 
         # Title page
         pdf.set_font_safe("B", 24)
-        pdf.cell(0, 20, "", ln=True)  # Spacer
-        pdf.multi_cell(0, 15, script.title, align="C")
+        pdf.ln(20)  # Spacer
+        pdf.multi_cell(0, 15, script.title, align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         pdf.set_font_safe("", 14)
-        pdf.cell(0, 10, "", ln=True)
-        pdf.cell(0, 10, f"總時長：{script.total_minutes:.0f} 分鐘", align="C", ln=True)
-        pdf.cell(0, 10, f"投影片數量：{len(script.scripts)}", align="C", ln=True)
+        pdf.ln(10)
+        pdf.cell(
+            0,
+            10,
+            f"總時長：{script.total_minutes:.0f} 分鐘",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
+        pdf.cell(
+            0,
+            10,
+            f"投影片數量：{len(script.scripts)}",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
 
         pdf.set_font_safe("I", 10)
-        pdf.cell(0, 20, "", ln=True)
+        pdf.ln(20)
         pdf.cell(
             0,
             10,
             f"生成時間：{script.generated_at.strftime('%Y-%m-%d %H:%M')}",
             align="C",
-            ln=True,
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
         )
 
         # Content pages
@@ -192,20 +207,25 @@ class DocumentExportService:
         pdf.set_font_safe("B", 16)
         pdf.set_text_color(0, 102, 204)
         header = f"投影片 {slide.slide_index + 1}：{slide.slide_title}"
-        pdf.multi_cell(0, 10, header)
+        pdf.multi_cell(0, 10, header, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         pdf.set_font_safe("I", 11)
         pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 8, f"預估時間：{slide.estimated_minutes:.1f} 分鐘", ln=True)
+        pdf.cell(
+            0,
+            8,
+            f"預估時間：{slide.estimated_minutes:.1f} 分鐘",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
         pdf.ln(5)
 
         # Lecture content
         pdf.set_font_safe("B", 12)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 8, "講課內容：", ln=True)
+        pdf.cell(0, 8, "講課內容：", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         pdf.set_font_safe("", 11)
-        # Handle long text by splitting into chunks
         content = slide.lecture_content or "(無內容)"
         self._add_multiline_text(pdf, content)
         pdf.ln(5)
@@ -214,42 +234,45 @@ class DocumentExportService:
         if slide.teaching_tips:
             pdf.set_font_safe("B", 12)
             pdf.set_text_color(0, 128, 0)
-            pdf.cell(0, 8, "教學提示：", ln=True)
+            pdf.cell(0, 8, "教學提示：", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
             pdf.set_font_safe("", 10)
             pdf.set_text_color(0, 0, 0)
             for tip in slide.teaching_tips:
-                pdf.cell(5)  # Indent
-                pdf.multi_cell(0, 6, f"• {tip}")
+                pdf.multi_cell(0, 6, f"  • {tip}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3)
 
         # Interactive Q&A
         if slide.interaction_qa:
             pdf.set_font_safe("B", 12)
             pdf.set_text_color(204, 102, 0)
-            pdf.cell(0, 8, "互動問答：", ln=True)
+            pdf.cell(0, 8, "互動問答：", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
             pdf.set_text_color(0, 0, 0)
             for qa in slide.interaction_qa:
                 pdf.set_font_safe("B", 10)
-                pdf.cell(5)
-                pdf.multi_cell(0, 6, f"問：{qa.question}")
+                pdf.multi_cell(0, 6, f"  問：{qa.question}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
                 if qa.expected_answers:
                     pdf.set_font_safe("I", 10)
-                    pdf.cell(10)
-                    pdf.multi_cell(0, 6, f"預期答案：{', '.join(qa.expected_answers)}")
+                    pdf.multi_cell(
+                        0,
+                        6,
+                        f"    預期答案：{', '.join(qa.expected_answers)}",
+                        new_x=XPos.LMARGIN,
+                        new_y=YPos.NEXT,
+                    )
             pdf.ln(3)
 
         # Transition
         if slide.transition:
             pdf.set_font_safe("B", 12)
             pdf.set_text_color(128, 0, 128)
-            pdf.cell(0, 8, "過場銜接：", ln=True)
+            pdf.cell(0, 8, "過場銜接：", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
             pdf.set_font_safe("I", 10)
             pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 6, slide.transition)
+            pdf.multi_cell(0, 6, slide.transition, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     def _add_multiline_text(self, pdf: ScriptPDF, text: str, max_chars: int = 2000):
         """Add multiline text with proper UTF-8 handling."""
@@ -258,7 +281,7 @@ class DocumentExportService:
             text = text[:max_chars] + "..."
 
         # With UTF-8 font support, no encoding conversion needed
-        pdf.multi_cell(0, 6, text)
+        pdf.multi_cell(0, 6, text, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     async def export_to_docx(
         self,
