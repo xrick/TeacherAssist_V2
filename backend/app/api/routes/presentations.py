@@ -49,8 +49,8 @@ async def download_presentation(
             else f"{presentation_id}.pptx"
         )
 
-        # Clean filename (remove invalid characters)
-        filename = "".join(c if c.isalnum() or c in (" ", "_", "-") else "_" for c in filename)
+        # Clean filename (remove invalid characters, but preserve "." for extension)
+        filename = "".join(c if c.isalnum() or c in (" ", "_", "-", ".") else "_" for c in filename)
 
         logger.info(f"Downloading presentation: {presentation_id}")
 
