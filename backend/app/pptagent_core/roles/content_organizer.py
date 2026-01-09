@@ -32,12 +32,15 @@ class ContentOrganizer:
         self.llm = llm_service
         self.max_slides = max_slides
 
-    async def organize(self, schema: dict[str, Any]) -> dict[str, Any]:
+    async def organize(
+        self, schema: dict[str, Any], target_slide_count: int | None = None
+    ) -> dict[str, Any]:
         """
         Organize schema into slide content
 
         Args:
             schema: Extracted schema from SchemaExtractor
+            target_slide_count: Target number of slides (uses max_slides if not provided)
 
         Returns:
             Dictionary with organized slides
@@ -46,15 +49,19 @@ class ContentOrganizer:
             ValueError: If organization fails or returns invalid JSON
             RuntimeError: If LLM generation fails
         """
+        # Determine target slide count
+        effective_slide_count = target_slide_count or self.max_slides
+
         logger.info(
-            f"Organizing content from schema ({schema.get('total_slides', 'unknown')} slides)..."
+            f"Organizing content from schema ({schema.get('total_slides', 'unknown')} slides), "
+            f"target: {effective_slide_count} slides..."
         )
 
         # Convert schema to JSON string for prompt
         schema_json = json.dumps(schema, indent=2)
 
         # Render prompt
-        user_prompt = render_content_organizer_prompt(schema_json, self.max_slides)
+        user_prompt = render_content_organizer_prompt(schema_json, effective_slide_count)
 
         # Generate organized content
         try:

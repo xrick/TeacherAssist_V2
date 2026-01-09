@@ -25,6 +25,7 @@ export interface GenerationRequest {
   template?: string;
   audience?: string;
   tone?: string;
+  slide_count?: number;
 }
 
 export interface GenerationResponse {

@@ -61,6 +61,7 @@ async def generate_presentation(
             template=request.template,
             audience=request.audience,
             tone=request.tone,
+            slide_count=request.slide_count,
         )
 
         # Add images to slides (auto-配圖)
@@ -172,6 +173,7 @@ async def generate_presentation_stream(
                 template=request.template,
                 audience=request.audience,
                 tone=request.tone,
+                slide_count=request.slide_count,
             ):
                 if "error" in update:
                     # Error event

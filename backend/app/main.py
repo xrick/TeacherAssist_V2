@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import generation, health, pexels, presentations, scripts, templates
 from app.core.config import settings
@@ -65,6 +66,13 @@ app.include_router(templates.router)
 app.include_router(presentations.router)
 app.include_router(pexels.router)
 app.include_router(scripts.router)
+
+# Mount static files for template previews
+app.mount(
+    "/api/v1/static/templates",
+    StaticFiles(directory=str(settings.template_storage_path)),
+    name="template_static",
+)
 
 
 @app.get("/")

@@ -63,6 +63,7 @@ class PPTService:
         template: str | None = None,
         audience: str | None = None,
         tone: str | None = None,
+        slide_count: int | None = None,
     ) -> Presentation:
         """
         Generate presentation from markdown content
@@ -74,6 +75,7 @@ class PPTService:
             template: Template file name
             audience: Target audience
             tone: Desired tone
+            slide_count: Target number of slides (auto-determined if not provided)
 
         Returns:
             Presentation object
@@ -99,7 +101,7 @@ class PPTService:
 
             # Stage 2: Organize content
             logger.info("[2/5] Organizing content...")
-            organized = await self.content_organizer.organize(schema)
+            organized = await self.content_organizer.organize(schema, slide_count)
 
             # Stage 3: Select layouts
             logger.info("[3/5] Selecting layouts...")
@@ -134,6 +136,7 @@ class PPTService:
         template: str | None = None,
         audience: str | None = None,
         tone: str | None = None,
+        slide_count: int | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """
         Generate presentation with progress streaming
@@ -186,7 +189,7 @@ class PPTService:
                 "message": "Organizing content into slides...",
             }
 
-            organized = await self.content_organizer.organize(schema)
+            organized = await self.content_organizer.organize(schema, slide_count)
 
             yield {
                 "stage": "content_organization",

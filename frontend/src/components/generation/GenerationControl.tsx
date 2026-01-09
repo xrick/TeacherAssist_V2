@@ -1,16 +1,17 @@
 interface GenerationOptions {
-  title: string
-  author: string
-  audience: string
-  tone: string
+  title: string;
+  author: string;
+  audience: string;
+  tone: string;
+  slideCount: string;
 }
 
 interface GenerationControlProps {
-  options: GenerationOptions
-  onOptionsChange: (options: GenerationOptions) => void
-  onGenerate: () => void
-  disabled?: boolean
-  isGenerating?: boolean
+  options: GenerationOptions;
+  onOptionsChange: (options: GenerationOptions) => void;
+  onGenerate: () => void;
+  disabled?: boolean;
+  isGenerating?: boolean;
 }
 
 export default function GenerationControl({
@@ -21,14 +22,16 @@ export default function GenerationControl({
   isGenerating,
 }: GenerationControlProps) {
   const handleChange = (field: keyof GenerationOptions, value: string) => {
-    onOptionsChange({ ...options, [field]: value })
-  }
+    onOptionsChange({ ...options, [field]: value });
+  };
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       {/* Header */}
       <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">生成設定</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+          生成設定
+        </h3>
       </div>
 
       {/* Form */}
@@ -41,7 +44,7 @@ export default function GenerationControl({
           <input
             type="text"
             value={options.title}
-            onChange={(e) => handleChange('title', e.target.value)}
+            onChange={(e) => handleChange("title", e.target.value)}
             placeholder="自動從內容提取"
             disabled={isGenerating}
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -56,7 +59,7 @@ export default function GenerationControl({
           <input
             type="text"
             value={options.author}
-            onChange={(e) => handleChange('author', e.target.value)}
+            onChange={(e) => handleChange("author", e.target.value)}
             placeholder="您的名字"
             disabled={isGenerating}
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -70,7 +73,7 @@ export default function GenerationControl({
           </label>
           <select
             value={options.audience}
-            onChange={(e) => handleChange('audience', e.target.value)}
+            onChange={(e) => handleChange("audience", e.target.value)}
             disabled={isGenerating}
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -90,7 +93,7 @@ export default function GenerationControl({
           </label>
           <select
             value={options.tone}
-            onChange={(e) => handleChange('tone', e.target.value)}
+            onChange={(e) => handleChange("tone", e.target.value)}
             disabled={isGenerating}
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -98,6 +101,26 @@ export default function GenerationControl({
             <option value="casual">輕鬆親切</option>
             <option value="academic">學術嚴謹</option>
             <option value="creative">創意活潑</option>
+          </select>
+        </div>
+
+        {/* Slide Count */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            頁數 <span className="text-slate-400">(可選)</span>
+          </label>
+          <select
+            value={options.slideCount}
+            onChange={(e) => handleChange("slideCount", e.target.value)}
+            disabled={isGenerating}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">自動決定</option>
+            <option value="5">5 頁（簡短）</option>
+            <option value="10">10 頁（標準）</option>
+            <option value="15">15 頁（詳細）</option>
+            <option value="20">20 頁（完整）</option>
+            <option value="25">25 頁（深入）</option>
           </select>
         </div>
 
@@ -133,5 +156,5 @@ export default function GenerationControl({
         </button>
       </div>
     </div>
-  )
+  );
 }

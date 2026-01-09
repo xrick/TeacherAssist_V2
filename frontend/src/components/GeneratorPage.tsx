@@ -19,6 +19,7 @@ export default function GeneratorPage() {
     author: "",
     audience: "",
     tone: "professional",
+    slideCount: "",
   });
 
   const sseState = useSSE();
@@ -37,6 +38,9 @@ export default function GeneratorPage() {
       template: selectedTemplate?.id || "default",
       audience: generationOptions.audience || undefined,
       tone: generationOptions.tone || undefined,
+      slide_count: generationOptions.slideCount
+        ? parseInt(generationOptions.slideCount, 10)
+        : undefined,
     };
 
     sseState.startGeneration(request);

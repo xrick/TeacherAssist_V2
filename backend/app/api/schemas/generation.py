@@ -20,6 +20,9 @@ class GenerationRequest(BaseModel):
         None, description="Target audience (e.g., 'professionals', 'students')"
     )
     tone: str | None = Field(None, description="Desired tone (e.g., 'professional', 'casual')")
+    slide_count: int | None = Field(
+        None, description="Target number of slides (auto-determined if not provided)"
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -30,6 +33,7 @@ class GenerationRequest(BaseModel):
                 "template": "default.pptx",
                 "audience": "professionals",
                 "tone": "professional",
+                "slide_count": 10,
             }
         }
     }
