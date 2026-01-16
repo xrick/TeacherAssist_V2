@@ -1,5 +1,11 @@
 """
 Generation API routes
+
+使用新的 4 階段流程：
+1. template_analysis - 分析 Template 結構
+2. content_generation - LLM 擴展使用者輸入
+3. content_organization - 組織內容到 Template 結構
+4. pptx_building - 建構最終 PPTX
 """
 
 import json
@@ -15,9 +21,15 @@ from app.api.schemas.generation import (
     GenerationRequest,
     GenerationResponse,
 )
-from app.core.config import settings
-from app.services.ppt_service import PPTService, get_ppt_service
-from app.services.pptx_builder import PPTXBuilder
+from app.pptagent_core.presentation.models import (
+    ContentElement,
+    ContentType,
+    LayoutType,
+    Presentation,
+    PresentationMetadata,
+    SlideContent,
+)
+from app.services.ppt_service_v2 import PPTServiceV2, get_ppt_service_v2
 from app.services.presentation_storage import PresentationStorage, get_presentation_storage
 from app.services.script_service import ScriptService, get_script_service
 from app.services.slide_image_service import SlideImageService, get_slide_image_service
@@ -27,10 +39,76 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/generate", tags=["generation"])
 
 
+def _convert_to_presentation(
+    organized_content: dict,
+    title: str | None,
+    author: str | None,
+    template: str | None,
+) -> Presentation:
+    """
+    將 PPTServiceV2 的輸出轉換為 Presentation model
+
+    Args:
+        organized_content: PPTServiceV2 的 draft_content
+        title: 簡報標題
+        author: 作者
+        template: 模板名稱
+
+    Returns:
+        Presentation model
+    """
+    # 建立 metadata
+    metadata = PresentationMetadata(
+        title=title or organized_content.get("title", "Untitled"),
+        author=author,
+        template=template or "default.pptx",
+    )
+
+    # 建立 slides
+    slides = []
+    for slide_data in organized_content.get("slides", []):
+        # 建立 elements
+        elements = []
+
+        # 從 bullet_points 建立元素
+        bullet_points = slide_data.get("bullet_points", [])
+        if bullet_points:
+            content = "\n".join(bullet_points) if isinstance(bullet_points, list) else bullet_points
+            elements.append(
+                ContentElement(
+                    type=ContentType.BULLET_LIST,
+                    content=content,
+                )
+            )
+
+        # 判斷 layout
+        slide_type = slide_data.get("slide_type", "content")
+        layout_map = {
+            "title": LayoutType.TITLE,
+            "content": LayoutType.CONTENT,
+            "section": LayoutType.SECTION_HEADER,
+            "closing": LayoutType.CLOSING,
+        }
+        layout = layout_map.get(slide_type, LayoutType.CONTENT)
+
+        slide = SlideContent(
+            title=slide_data.get("title", ""),
+            elements=elements,
+            notes=slide_data.get("speaker_notes"),
+            layout=layout,
+            metadata={
+                "visual_suggestion": slide_data.get("visual_suggestion", ""),
+            },
+        )
+        slides.append(slide)
+
+    return Presentation(metadata=metadata, slides=slides)
+
+
 @router.post("/", response_model=GenerationResponse)
 async def generate_presentation(
     request: GenerationRequest,
-    ppt_service: PPTService = Depends(get_ppt_service),
+    ppt_service: PPTServiceV2 = Depends(get_ppt_service_v2),
     storage: PresentationStorage = Depends(get_presentation_storage),
     slide_image_service: SlideImageService = Depends(get_slide_image_service),
     script_service: ScriptService = Depends(get_script_service),
@@ -38,8 +116,7 @@ async def generate_presentation(
     """
     Generate a presentation from markdown content
 
-    This endpoint generates a complete presentation synchronously.
-    For progress updates, use the `/stream` endpoint instead.
+    使用新的 4 階段流程生成簡報。
 
     Args:
         request: Generation request with markdown content and options
@@ -53,15 +130,33 @@ async def generate_presentation(
     try:
         logger.info(f"Generating presentation: {request.title or 'Untitled'}")
 
-        # Generate presentation model
-        presentation = await ppt_service.generate_presentation(
-            markdown_content=request.markdown_content,
-            title=request.title,
-            author=request.author,
+        # 使用 PPTServiceV2 生成 (4 階段流程)
+        # 先執行完整流程取得 draft_content 用於建立 Presentation model
+        draft_content = None
+        pptx_bytes = None
+
+        async for update in ppt_service.generate_stream(
+            user_input=request.markdown_content,
             template=request.template,
+            slide_count=request.slide_count or 10,
             audience=request.audience,
-            tone=request.tone,
-            slide_count=request.slide_count,
+            language="zh-TW",
+        ):
+            if "error" in update:
+                raise ValueError(update["error"])
+            if "result" in update:
+                pptx_bytes = update["result"]
+                draft_content = update.get("draft_content", {})
+
+        if pptx_bytes is None:
+            raise ValueError("Generation failed: no result")
+
+        # 轉換為 Presentation model (用於 script 生成和 image 服務)
+        presentation = _convert_to_presentation(
+            draft_content or {},
+            request.title,
+            request.author,
+            request.template,
         )
 
         # Add images to slides (auto-配圖)
@@ -74,17 +169,6 @@ async def generate_presentation(
             logger.info("Images added successfully")
         except Exception as img_error:
             logger.warning(f"Failed to add images, continuing without: {img_error}")
-
-        # Build PPTX file
-        template_path = None
-        if request.template:
-            template_path = settings.template_storage_path / f"{request.template}.pptx"
-            if not template_path.exists():
-                template_path = None
-                logger.warning(f"Template not found: {request.template}, using default")
-
-        builder = PPTXBuilder(template_path)
-        pptx_bytes = builder.build(presentation)
 
         # Save to storage
         presentation_id = str(uuid.uuid4())
@@ -129,7 +213,7 @@ async def generate_presentation(
 @router.post("/stream")
 async def generate_presentation_stream(
     request: GenerationRequest,
-    ppt_service: PPTService = Depends(get_ppt_service),
+    ppt_service: PPTServiceV2 = Depends(get_ppt_service_v2),
     storage: PresentationStorage = Depends(get_presentation_storage),
     slide_image_service: SlideImageService = Depends(get_slide_image_service),
     script_service: ScriptService = Depends(get_script_service),
@@ -137,8 +221,11 @@ async def generate_presentation_stream(
     """
     Generate a presentation with Server-Sent Events (SSE) progress updates
 
-    This endpoint returns an SSE stream with real-time progress updates.
-    The final event will contain the completed presentation.
+    使用新的 4 階段流程：
+    1. template_analysis (0-10%)
+    2. content_generation (10-50%)
+    3. content_organization (50-80%)
+    4. pptx_building (80-100%)
 
     Args:
         request: Generation request with markdown content and options
@@ -149,7 +236,7 @@ async def generate_presentation_stream(
     Event format:
     ```
     event: progress
-    data: {"stage": "schema_extraction", "progress": 20, "message": "..."}
+    data: {"stage": "template_analysis", "progress": 10, "message": "..."}
 
     event: complete
     data: {"presentation_id": "...", "slide_count": 10}
@@ -158,25 +245,23 @@ async def generate_presentation_stream(
     data: {"error": "..."}
     ```
     """
-    # Capture storage in closure
     presentation_storage = storage
 
     async def event_generator() -> AsyncGenerator[dict, None]:
         """Generate SSE events for progress updates"""
         try:
             presentation_id = str(uuid.uuid4())
+            pptx_bytes = None
+            draft_content = None
 
-            async for update in ppt_service.generate_presentation_stream(
-                markdown_content=request.markdown_content,
-                title=request.title,
-                author=request.author,
+            async for update in ppt_service.generate_stream(
+                user_input=request.markdown_content,
                 template=request.template,
+                slide_count=request.slide_count or 10,
                 audience=request.audience,
-                tone=request.tone,
-                slide_count=request.slide_count,
+                language="zh-TW",
             ):
                 if "error" in update:
-                    # Error event
                     yield {
                         "event": "error",
                         "data": json.dumps({"error": update["error"]}),
@@ -184,10 +269,19 @@ async def generate_presentation_stream(
                     break
 
                 elif "result" in update:
-                    # Completion event - build and save PPTX
-                    presentation = update["result"]
+                    pptx_bytes = update["result"]
+                    draft_content = update.get("draft_content", {})
+                    stats = update.get("stats", {})
 
                     try:
+                        # 轉換為 Presentation model
+                        presentation = _convert_to_presentation(
+                            draft_content,
+                            request.title,
+                            request.author,
+                            request.template,
+                        )
+
                         # Add images to slides (auto-配圖)
                         yield {
                             "event": "progress",
@@ -207,18 +301,6 @@ async def generate_presentation_stream(
                             )
                         except Exception as img_error:
                             logger.warning(f"Failed to add images: {img_error}")
-
-                        # Build PPTX file
-                        template_path = None
-                        if request.template:
-                            template_path = (
-                                settings.template_storage_path / f"{request.template}.pptx"
-                            )
-                            if not template_path.exists():
-                                template_path = None
-
-                        builder = PPTXBuilder(template_path)
-                        pptx_bytes = builder.build(presentation)
 
                         # Save to storage
                         await presentation_storage.save_presentation(
@@ -259,13 +341,13 @@ async def generate_presentation_stream(
                                     "slide_count": presentation.slide_count(),
                                     "download_url": f"/api/v1/presentations/{presentation_id}/download",
                                     "script_generated": script_generated,
-                                    "stats": update.get("stats", {}),
+                                    "stats": stats,
                                 }
                             ),
                         }
 
                     except Exception as build_error:
-                        logger.error(f"Failed to build/save PPTX: {build_error}", exc_info=True)
+                        logger.error(f"Failed to save presentation: {build_error}", exc_info=True)
                         yield {
                             "event": "error",
                             "data": json.dumps(
@@ -274,7 +356,7 @@ async def generate_presentation_stream(
                         }
 
                 else:
-                    # Progress event
+                    # Progress event - 直接轉發 PPTServiceV2 的進度
                     yield {
                         "event": "progress",
                         "data": json.dumps(
