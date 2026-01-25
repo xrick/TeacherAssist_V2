@@ -1,0 +1,8 @@
+/sc:test --focus quality
+請重新以 backend/tests/data/ml.md 內容進行**整合測試**，並輸出產生的pptx
+- 已加入Pexels API key
+- 請修正標題在正上方，大小為28
+- 每頁的內容由llm依照使用者輸入的內容及該頁的標題進行生成。
+- 每頁的圖片由llm先進行文字內容分析，取出最核心的概念，再使用進行圖片搜尋。
+- 取得的圖片再依照layout engine放置到每頁適當的位置。
+- 最後產生pptx輸出至 backend/outputs

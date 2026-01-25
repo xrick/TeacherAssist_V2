@@ -10,35 +10,36 @@ interface ProgressMonitorProps {
 }
 
 /**
- * 新的 4 階段流程：
+ * 5 階段流程（含圖片整合）：
  * 1. template_analysis - 分析 Template 結構 (0-10%)
- * 2. content_generation - LLM 擴展使用者輸入 (10-50%)
- * 3. content_organization - 組織內容到 Template (50-80%)
- * 4. pptx_building - 建構最終 PPTX (80-100%)
+ * 2. content_generation - LLM 擴展使用者輸入 (10-45%)
+ * 3. content_organization - 組織內容到 Template (45-65%)
+ * 4. image_enrichment - 圖片搜尋與注入 (65-85%)
+ * 5. pptx_building - 建構最終 PPTX，含 Layout Engine (85-100%)
  *
  * 額外階段（後處理）：
- * - adding_images - 自動配圖 (85%)
  * - generating_script - 生成教學稿 (92%)
  * - completed - 完成 (100%)
  */
 const stageNames: Record<string, string> = {
-  // 4 階段主流程
+  // 5 階段主流程
   template_analysis: "🔍 分析模板",
   content_generation: "✨ 生成內容",
   content_organization: "📋 組織結構",
+  image_enrichment: "🖼️ 配置圖片",
   pptx_building: "🏗️ 建構簡報",
   // 後處理階段
-  adding_images: "🖼️ 自動配圖",
   generating_script: "📝 生成教學稿",
   completed: "✅ 完成",
 };
 
-// 主要 4 階段（用於進度指示器）
+// 主要 5 階段（用於進度指示器）
 const mainStages = [
   { key: "template_analysis", name: "分析模板", progressStart: 0 },
   { key: "content_generation", name: "生成內容", progressStart: 10 },
-  { key: "content_organization", name: "組織結構", progressStart: 50 },
-  { key: "pptx_building", name: "建構簡報", progressStart: 80 },
+  { key: "content_organization", name: "組織結構", progressStart: 45 },
+  { key: "image_enrichment", name: "配置圖片", progressStart: 65 },
+  { key: "pptx_building", name: "建構簡報", progressStart: 85 },
 ];
 
 export default function ProgressMonitor({
@@ -149,8 +150,8 @@ export default function ProgressMonitor({
           </div>
         )}
 
-        {/* Stage Indicators - 新的 4 階段 */}
-        <div className="mt-6 grid grid-cols-4 gap-2">
+        {/* Stage Indicators - 5 階段流程 */}
+        <div className="mt-6 grid grid-cols-5 gap-2">
           {mainStages.map((stage, index) => {
             const isActive = currentProgress >= stage.progressStart;
             const isCurrent =
@@ -205,13 +206,10 @@ export default function ProgressMonitor({
         </div>
 
         {/* 後處理階段提示 */}
-        {(currentStage === "adding_images" ||
-          currentStage === "generating_script") && (
+        {currentStage === "generating_script" && (
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              {currentStage === "adding_images"
-                ? "🖼️ 正在為投影片自動配置圖片..."
-                : "📝 正在生成教學講稿..."}
+              📝 正在生成教學講稿...
             </p>
           </div>
         )}

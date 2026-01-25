@@ -245,5 +245,31 @@
     "cached_at": "2026-01-09T10:02:26.631241",
     "expires_at": "2026-01-16T10:02:26.631241",
     "file_size_bytes": 69194
+  },
+  "\u6a5f\u5668\u5b78\u7fd2\u4e09\u5927\u985e\u5225_31413052": {
+    "image_id": 31413052,
+    "keyword": "\u6a5f\u5668\u5b78\u7fd2\u4e09\u5927\u985e\u5225",
+    "file_path": "data/pexels_cache/\u6a5f\u5668\u5b78\u7fd2\u4e09\u5927\u985e\u5225/31413052.jpg",
+    "original_url": "https://images.pexels.com/photos/31413052/pexels-photo-31413052.jpeg",
+    "photographer": "nana liu",
+    "photographer_url": "https://www.pexels.com/@nana-llj",
+    "pexels_url": "https://www.pexels.com/photo/modern-entrance-with-water-coolers-and-signage-31413052/",
+    "alt_text": "Entrance with stacked water coolers, modern architecture, and restroom signage.",
+    "cached_at": "2026-01-25T09:57:42.690012",
+    "expires_at": "2026-02-01T09:57:42.690012",
+    "file_size_bytes": 50538
+  },
+  "\u6a5f\u5668\u5b78\u7fd2\u5c08\u6848\u6d41\u7a0b_33148688": {
+    "image_id": 33148688,
+    "keyword": "\u6a5f\u5668\u5b78\u7fd2\u5c08\u6848\u6d41\u7a0b",
+    "file_path": "data/pexels_cache/\u6a5f\u5668\u5b78\u7fd2\u5c08\u6848\u6d41\u7a0b/33148688.jpg",
+    "original_url": "https://images.pexels.com/photos/33148688/pexels-photo-33148688.jpeg",
+    "photographer": "Lywin",
+    "photographer_url": "https://www.pexels.com/@lywin-55237728",
+    "pexels_url": "https://www.pexels.com/photo/scenic-tibetan-valley-with-snow-capped-mountains-33148688/",
+    "alt_text": "Beautiful valley in Tibet with a river, traditional houses, and snow-capped mountains in the distance.",
+    "cached_at": "2026-01-25T09:57:46.193630",
+    "expires_at": "2026-02-01T09:57:46.193630",
+    "file_size_bytes": 65513
   }
 }

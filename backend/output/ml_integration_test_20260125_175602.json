@@ -1,0 +1,109 @@
+{
+  "test_time": "2026-01-25T17:56:02.630738",
+  "input_file": "/Users/xrickliao/WorkSpaces/Work/Projects/TeacherAssist_V2/backend/tests/data/ml.md",
+  "input_length": 1192,
+  "stages": [
+    {
+      "stage": "template_analysis",
+      "progress": 0,
+      "message": "分析 Template: modern_clean.pptx",
+      "timestamp": "2026-01-25T17:56:02.630764"
+    },
+    {
+      "stage": "template_analysis",
+      "progress": 10,
+      "message": "Template 分析完成: 4 張投影片結構",
+      "timestamp": "2026-01-25T17:56:02.660829"
+    },
+    {
+      "stage": "content_generation",
+      "progress": 10,
+      "message": "LLM 正在擴展和結構化內容...",
+      "timestamp": "2026-01-25T17:56:02.660853"
+    },
+    {
+      "stage": "content_generation",
+      "progress": 45,
+      "message": "內容草稿完成: 4 張投影片",
+      "timestamp": "2026-01-25T17:56:38.161842"
+    },
+    {
+      "stage": "content_organization",
+      "progress": 45,
+      "message": "組織內容到 Template 結構...",
+      "timestamp": "2026-01-25T17:56:38.161879"
+    },
+    {
+      "stage": "content_organization",
+      "progress": 65,
+      "message": "內容組織完成",
+      "timestamp": "2026-01-25T17:57:38.613587"
+    },
+    {
+      "stage": "image_enrichment",
+      "progress": 65,
+      "message": "搜尋並注入圖片...",
+      "timestamp": "2026-01-25T17:57:38.613632"
+    },
+    {
+      "stage": "image_enrichment",
+      "progress": 85,
+      "message": "圖片注入完成: 2 張圖片",
+      "timestamp": "2026-01-25T17:57:46.194437"
+    },
+    {
+      "stage": "pptx_building",
+      "progress": 85,
+      "message": "建構 PPTX 檔案...",
+      "timestamp": "2026-01-25T17:57:46.194472"
+    },
+    {
+      "stage": "completed",
+      "progress": 100,
+      "message": "完成: 103.95s",
+      "timestamp": "2026-01-25T17:57:46.577578"
+    }
+  ],
+  "output": {
+    "pptx_path": "/Users/xrickliao/WorkSpaces/Work/Projects/TeacherAssist_V2/backend/output/ml_integration_test_20260125_175602.pptx",
+    "pptx_size": 477694,
+    "slide_count": 4,
+    "duration_seconds": 103.94687,
+    "template": "modern_clean.pptx",
+    "slides_detail": [
+      {
+        "index": 0,
+        "text_preview": [
+          "讓電腦自學、無需顯式編程",
+          "讓電腦自學、無需顯式編程"
+        ],
+        "has_image": false
+      },
+      {
+        "index": 1,
+        "text_preview": [
+          "監督式學習：標註資料 → 分類/迴歸\u000b非監督式學習：無標籤 → 分群/降維\u000b強化學習：獎懲機制 → AlphaGo、無人駕駛",
+          "監督式學習：標註資料 → 分類/迴歸\u000b非監督式學習：無標籤 → 分群/降維\u000b強化學習：獎懲機制 → AlphaGo、無人駕駛"
+        ],
+        "has_image": true
+      },
+      {
+        "index": 2,
+        "text_preview": [
+          "資料收集：清理雜訊、缺失值\u000b特徵工程：挑選關鍵特徵\u000b模型選擇：隨機森林、SVM、神經網\u000b訓練與評估：訓練集、測試集\u000b部署與優化：上線、微調",
+          "資料收集：清理雜訊、缺失值\u000b特徵工程：挑選關鍵特徵\u000b模型選擇：隨機森林、SVM、神經網\u000b訓練與評估：訓練集、測試集\u000b部署與優化：上線、微調"
+        ],
+        "has_image": true
+      },
+      {
+        "index": 3,
+        "text_preview": [
+          "大數據、GPU、深度學習驅動",
+          "大數據、GPU、深度學習驅動"
+        ],
+        "has_image": false
+      }
+    ],
+    "slides_with_images": 2
+  }
+}

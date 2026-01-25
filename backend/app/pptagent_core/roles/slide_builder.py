@@ -128,12 +128,12 @@ class SlideBuilder:
                     text_str = str(content_value)
 
                 # 使用 AutoFitter 替代直接賦值
-                # 策略：標題允許較大字級 (44pt)，內文較小 (24pt)
+                # 策略：標題固定 28pt，內文較小 (24pt)
                 is_title = (
                     ph_format.type == PP_PLACEHOLDER.TITLE
                     or ph_format.type == PP_PLACEHOLDER.CENTER_TITLE
                 )
-                max_size = 44 if is_title else 24
+                max_size = 28 if is_title else 24
 
                 # TODO: 可以從 Template 讀取該 Placeholder 原本的字體名稱
                 # 目前暫時統一使用 Arial (因為有 fallback 保護)
