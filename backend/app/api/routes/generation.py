@@ -1,11 +1,12 @@
 """
 Generation API routes
 
-使用新的 4 階段流程：
+使用新的 5 階段流程（含圖片）：
 1. template_analysis - 分析 Template 結構
 2. content_generation - LLM 擴展使用者輸入
 3. content_organization - 組織內容到 Template 結構
-4. pptx_building - 建構最終 PPTX
+4. image_enrichment - 注入圖片（可選）
+5. pptx_building - 建構最終 PPTX
 """
 
 import json
@@ -32,7 +33,6 @@ from app.pptagent_core.presentation.models import (
 from app.services.ppt_service_v2 import PPTServiceV2, get_ppt_service_v2
 from app.services.presentation_storage import PresentationStorage, get_presentation_storage
 from app.services.script_service import ScriptService, get_script_service
-from app.services.slide_image_service import SlideImageService, get_slide_image_service
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,6 @@ async def generate_presentation(
     request: GenerationRequest,
     ppt_service: PPTServiceV2 = Depends(get_ppt_service_v2),
     storage: PresentationStorage = Depends(get_presentation_storage),
-    slide_image_service: SlideImageService = Depends(get_slide_image_service),
     script_service: ScriptService = Depends(get_script_service),
 ) -> GenerationResponse:
     """
@@ -130,45 +129,42 @@ async def generate_presentation(
     try:
         logger.info(f"Generating presentation: {request.title or 'Untitled'}")
 
-        # 使用 PPTServiceV2 生成 (4 階段流程)
+        # 使用 PPTServiceV2 生成 (5 階段流程，含圖片)
         # 先執行完整流程取得 draft_content 用於建立 Presentation model
         draft_content = None
         pptx_bytes = None
+        image_count = 0
 
         async for update in ppt_service.generate_stream(
             user_input=request.markdown_content,
             template=request.template,
             slide_count=request.slide_count or 10,
             audience=request.audience,
-            language="zh-TW",
+            language=request.language,
+            add_images=request.add_images,
+            images_per_slide=request.images_per_slide,
         ):
             if "error" in update:
                 raise ValueError(update["error"])
             if "result" in update:
                 pptx_bytes = update["result"]
                 draft_content = update.get("draft_content", {})
+                # 統計圖片數量（從 enriched_content）
+                enriched = update.get("enriched_content", draft_content)
+                for slide in enriched.get("slides", []):
+                    image_count += len(slide.get("images", []))
 
         if pptx_bytes is None:
             raise ValueError("Generation failed: no result")
 
-        # 轉換為 Presentation model (用於 script 生成和 image 服務)
+        # 轉換為 Presentation model (用於 script 生成)
         presentation = _convert_to_presentation(
             draft_content or {},
             request.title,
             request.author,
             request.template,
         )
-
-        # Add images to slides (auto-配圖)
-        try:
-            logger.info("Adding images to presentation slides...")
-            presentation = await slide_image_service.add_images_to_presentation(
-                presentation=presentation,
-                images_per_slide=1,
-            )
-            logger.info("Images added successfully")
-        except Exception as img_error:
-            logger.warning(f"Failed to add images, continuing without: {img_error}")
+        # 圖片已由 ImageEnricher 在 PPTServiceV2 內部處理
 
         # Save to storage
         presentation_id = str(uuid.uuid4())
@@ -193,6 +189,7 @@ async def generate_presentation(
             message="Presentation generated successfully",
             presentation_id=presentation_id,
             slide_count=presentation.slide_count(),
+            image_count=image_count,
             download_url=f"/api/v1/presentations/{presentation_id}/download",
             metadata={
                 "title": presentation.metadata.title,
@@ -215,17 +212,17 @@ async def generate_presentation_stream(
     request: GenerationRequest,
     ppt_service: PPTServiceV2 = Depends(get_ppt_service_v2),
     storage: PresentationStorage = Depends(get_presentation_storage),
-    slide_image_service: SlideImageService = Depends(get_slide_image_service),
     script_service: ScriptService = Depends(get_script_service),
 ):
     """
     Generate a presentation with Server-Sent Events (SSE) progress updates
 
-    使用新的 4 階段流程：
+    使用新的 5 階段流程（含圖片）：
     1. template_analysis (0-10%)
-    2. content_generation (10-50%)
-    3. content_organization (50-80%)
-    4. pptx_building (80-100%)
+    2. content_generation (10-40%)
+    3. content_organization (40-60%)
+    4. image_enrichment (60-80%) - 可選
+    5. pptx_building (80-100%)
 
     Args:
         request: Generation request with markdown content and options
@@ -253,13 +250,16 @@ async def generate_presentation_stream(
             presentation_id = str(uuid.uuid4())
             pptx_bytes = None
             draft_content = None
+            image_count = 0
 
             async for update in ppt_service.generate_stream(
                 user_input=request.markdown_content,
                 template=request.template,
                 slide_count=request.slide_count or 10,
                 audience=request.audience,
-                language="zh-TW",
+                language=request.language,
+                add_images=request.add_images,
+                images_per_slide=request.images_per_slide,
             ):
                 if "error" in update:
                     yield {
@@ -272,6 +272,10 @@ async def generate_presentation_stream(
                     pptx_bytes = update["result"]
                     draft_content = update.get("draft_content", {})
                     stats = update.get("stats", {})
+                    # 統計圖片數量（從 enriched_content）
+                    enriched = update.get("enriched_content", draft_content)
+                    for slide in enriched.get("slides", []):
+                        image_count += len(slide.get("images", []))
 
                     try:
                         # 轉換為 Presentation model
@@ -281,26 +285,7 @@ async def generate_presentation_stream(
                             request.author,
                             request.template,
                         )
-
-                        # Add images to slides (auto-配圖)
-                        yield {
-                            "event": "progress",
-                            "data": json.dumps(
-                                {
-                                    "stage": "adding_images",
-                                    "progress": 85,
-                                    "message": "Adding images to slides...",
-                                }
-                            ),
-                        }
-
-                        try:
-                            presentation = await slide_image_service.add_images_to_presentation(
-                                presentation=presentation,
-                                images_per_slide=1,
-                            )
-                        except Exception as img_error:
-                            logger.warning(f"Failed to add images: {img_error}")
+                        # 圖片已由 ImageEnricher 在 PPTServiceV2 內部處理
 
                         # Save to storage
                         await presentation_storage.save_presentation(
@@ -339,6 +324,7 @@ async def generate_presentation_stream(
                                 {
                                     "presentation_id": presentation_id,
                                     "slide_count": presentation.slide_count(),
+                                    "image_count": image_count,
                                     "download_url": f"/api/v1/presentations/{presentation_id}/download",
                                     "script_generated": script_generated,
                                     "stats": stats,

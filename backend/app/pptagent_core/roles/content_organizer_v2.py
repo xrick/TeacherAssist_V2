@@ -260,12 +260,48 @@ class ContentOrganizerV2:
                 slide["layout_name"] = template_slide.get(
                     "layout_name", slide.get("layout_name", "")
                 )
+                # 新增：確保 layout 類型欄位存在（供 ImageEnricher 和 SlideBuilder 使用）
+                if "layout" not in slide:
+                    slide["layout"] = self._determine_layout_type(template_slide)
 
         organized["slides"] = organized_slides
         organized["template"] = template_structure.get("template", "")
         organized["slide_count"] = len(organized_slides)
 
         return organized
+
+    def _determine_layout_type(self, template_slide: dict[str, Any]) -> str:
+        """
+        根據 layout_name 判斷 layout 類型
+
+        Args:
+            template_slide: 模板投影片結構
+
+        Returns:
+            layout 類型字串: title, content, two_column, image_text, closing
+        """
+        layout_name = template_slide.get("layout_name", "").lower()
+        layout_index = template_slide.get("layout_index", 1)
+
+        # 根據 layout_name 判斷
+        if "title" in layout_name and "content" not in layout_name:
+            return "title"
+        elif "two" in layout_name or "column" in layout_name:
+            return "two_column"
+        elif "image" in layout_name:
+            return "image_text"
+        elif "closing" in layout_name or "end" in layout_name or "thank" in layout_name:
+            return "closing"
+        elif "section" in layout_name or "header" in layout_name:
+            return "section_header"
+
+        # 根據 layout_index 判斷（常見的 PPTX 結構）
+        if layout_index == 0:
+            return "title"
+        elif layout_index == 1:
+            return "content"
+
+        return "content"
 
     def _fallback_organize(
         self,
@@ -292,6 +328,7 @@ class ContentOrganizerV2:
                 "index": i,
                 "layout_index": template_slide.get("layout_index", 1),
                 "layout_name": template_slide.get("layout_name", ""),
+                "layout": self._determine_layout_type(template_slide),
                 "placeholders": [],
                 "speaker_notes": draft_slide.get("speaker_notes", ""),
                 "visual_suggestion": draft_slide.get("visual_suggestion", ""),

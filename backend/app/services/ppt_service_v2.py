@@ -1,13 +1,14 @@
 """
 PPT Generation Service V2
 
-四階段流程：
+五階段流程（含圖片）：
 1. TemplateAnalyzer - 分析 Template 結構
 2. ContentGenerator - LLM 擴展使用者輸入
 3. ContentOrganizerV2 - 組織內容到 Template 結構
-4. SlideBuilder - 建構最終 PPTX
+4. ImageEnricher - 注入圖片（可選）
+5. SlideBuilder - 建構最終 PPTX
 
-核心原則：使用者輸入 → LLM 擴展 → 結構化組織 → PPTX 輸出
+核心原則：使用者輸入 → LLM 擴展 → 結構化組織 → 圖片注入 → PPTX 輸出
 """
 
 import logging
@@ -19,6 +20,7 @@ from typing import Any
 from app.core.config import settings
 from app.pptagent_core.roles.content_generator import ContentGenerator
 from app.pptagent_core.roles.content_organizer_v2 import ContentOrganizerV2
+from app.pptagent_core.roles.image_enricher import ImageEnricher
 from app.pptagent_core.roles.slide_builder import SlideBuilder
 from app.pptagent_core.roles.template_analyzer import TemplateAnalyzer
 from app.services.llm_service import LLMService, get_llm_service
@@ -28,12 +30,14 @@ logger = logging.getLogger(__name__)
 
 class PPTServiceV2:
     """
-    四階段 PPT 生成服務
+    五階段 PPT 生成服務（含圖片）
 
     工作流程：
     User Input → ContentGenerator → Draft Content
                                           ↓
     Template → TemplateAnalyzer → Structure → ContentOrganizerV2 → Organized Content
+                                                                          ↓
+                                                              ImageEnricher → Enriched Content
                                                                           ↓
                                                               SlideBuilder → PPTX
     """
@@ -74,6 +78,8 @@ class PPTServiceV2:
         slide_count: int = 10,
         audience: str | None = None,
         language: str = "zh-TW",
+        add_images: bool = True,
+        images_per_slide: int = 1,
     ) -> bytes:
         """
         從使用者輸入生成簡報
@@ -84,19 +90,22 @@ class PPTServiceV2:
             slide_count: 目標投影片數量
             audience: 目標受眾
             language: 輸出語言
+            add_images: 是否自動加入圖片（預設啟用）
+            images_per_slide: 每張投影片的圖片數量（1-3）
 
         Returns:
             PPTX 檔案的 bytes
         """
         start_time = datetime.now()
-        logger.info(f"開始生成簡報: {len(user_input)} 字元輸入")
+        total_stages = 5 if add_images else 4
+        logger.info(f"開始生成簡報: {len(user_input)} 字元輸入, 圖片: {add_images}")
 
         try:
             # 取得 Template 路徑
             template_path = self._get_template_path(template)
 
             # Stage 1: 分析 Template
-            logger.info("[1/4] 分析 Template 結構...")
+            logger.info(f"[1/{total_stages}] 分析 Template 結構...")
             analyzer = TemplateAnalyzer(template_path)
             template_structure = analyzer.analyze(
                 slide_count=slide_count,
@@ -105,7 +114,7 @@ class PPTServiceV2:
             )
 
             # Stage 2: 生成內容草稿
-            logger.info("[2/4] LLM 擴展使用者輸入...")
+            logger.info(f"[2/{total_stages}] LLM 擴展使用者輸入...")
             generator = ContentGenerator(self.llm)
             draft_content = await generator.generate(
                 user_input=user_input,
@@ -115,23 +124,38 @@ class PPTServiceV2:
             )
 
             # Stage 3: 組織內容到 Template 結構
-            logger.info("[3/4] 組織內容到 Template...")
+            logger.info(f"[3/{total_stages}] 組織內容到 Template...")
             organizer = ContentOrganizerV2(self.llm)
             organized_content = await organizer.organize(
                 draft_content=draft_content,
                 template_structure=template_structure,
             )
 
-            # Stage 4: 建構 PPTX
-            logger.info("[4/4] 建構 PPTX 檔案...")
+            # Stage 4: 注入圖片（可選）
+            if add_images:
+                logger.info(f"[4/{total_stages}] 注入圖片...")
+                enricher = ImageEnricher()
+                enriched_content = await enricher.enrich(
+                    organized_content=organized_content,
+                    draft_content=draft_content,
+                    presentation_title=draft_content.get("title", "Presentation"),
+                    images_per_slide=images_per_slide,
+                )
+            else:
+                enriched_content = organized_content
+
+            # Stage 5 (or 4): 建構 PPTX
+            logger.info(f"[{total_stages}/{total_stages}] 建構 PPTX 檔案...")
             builder = SlideBuilder(template_path)
-            pptx_bytes = builder.build(organized_content)
+            pptx_bytes = builder.build(enriched_content)
 
             # 完成
             duration = (datetime.now() - start_time).total_seconds()
+            total_images = sum(len(s.get("images", [])) for s in enriched_content.get("slides", []))
             logger.info(
                 f"簡報生成完成: "
-                f"{len(organized_content.get('slides', []))} 張投影片, "
+                f"{len(enriched_content.get('slides', []))} 張投影片, "
+                f"{total_images} 張圖片, "
                 f"{duration:.2f}s"
             )
 
@@ -148,15 +172,30 @@ class PPTServiceV2:
         slide_count: int = 10,
         audience: str | None = None,
         language: str = "zh-TW",
+        add_images: bool = True,
+        images_per_slide: int = 1,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """
         生成簡報（帶進度串流）
+
+        Args:
+            user_input: 使用者的 markdown/text 輸入
+            template: Template 檔案名稱
+            slide_count: 目標投影片數量
+            audience: 目標受眾
+            language: 輸出語言
+            add_images: 是否自動加入圖片
+            images_per_slide: 每張投影片的圖片數量
 
         Yields:
             進度更新，包含 stage, progress, message
             最後一則包含 result (PPTX bytes)
         """
         start_time = datetime.now()
+
+        # 根據是否加入圖片調整進度百分比
+        # 有圖片: 0-10-45-65-85-100
+        # 無圖片: 0-10-50-80-100
 
         try:
             template_path = self._get_template_path(template)
@@ -181,7 +220,7 @@ class PPTServiceV2:
                 "message": f"Template 分析完成: {template_structure['slide_count']} 張投影片結構",
             }
 
-            # Stage 2: 生成內容草稿 (10-50%)
+            # Stage 2: 生成內容草稿 (10-45% or 10-50%)
             yield {
                 "stage": "content_generation",
                 "progress": 10,
@@ -196,16 +235,17 @@ class PPTServiceV2:
                 language=language,
             )
 
+            progress_after_content = 45 if add_images else 50
             yield {
                 "stage": "content_generation",
-                "progress": 50,
+                "progress": progress_after_content,
                 "message": f"內容草稿完成: {len(draft_content.get('slides', []))} 張投影片",
             }
 
-            # Stage 3: 組織內容 (50-80%)
+            # Stage 3: 組織內容 (45-65% or 50-80%)
             yield {
                 "stage": "content_organization",
-                "progress": 50,
+                "progress": progress_after_content,
                 "message": "組織內容到 Template 結構...",
             }
 
@@ -215,21 +255,51 @@ class PPTServiceV2:
                 template_structure=template_structure,
             )
 
+            progress_after_organize = 65 if add_images else 80
             yield {
                 "stage": "content_organization",
-                "progress": 80,
+                "progress": progress_after_organize,
                 "message": "內容組織完成",
             }
 
-            # Stage 4: 建構 PPTX (80-100%)
+            # Stage 4: 注入圖片（可選）(65-85%)
+            if add_images:
+                yield {
+                    "stage": "image_enrichment",
+                    "progress": 65,
+                    "message": "搜尋並注入圖片...",
+                }
+
+                enricher = ImageEnricher()
+                enriched_content = await enricher.enrich(
+                    organized_content=organized_content,
+                    draft_content=draft_content,
+                    presentation_title=draft_content.get("title", "Presentation"),
+                    images_per_slide=images_per_slide,
+                )
+
+                total_images = sum(
+                    len(s.get("images", [])) for s in enriched_content.get("slides", [])
+                )
+                yield {
+                    "stage": "image_enrichment",
+                    "progress": 85,
+                    "message": f"圖片注入完成: {total_images} 張圖片",
+                }
+            else:
+                enriched_content = organized_content
+                total_images = 0
+
+            # Stage 5 (or 4): 建構 PPTX (85-100% or 80-100%)
+            progress_before_build = 85 if add_images else 80
             yield {
                 "stage": "pptx_building",
-                "progress": 80,
+                "progress": progress_before_build,
                 "message": "建構 PPTX 檔案...",
             }
 
             builder = SlideBuilder(template_path)
-            pptx_bytes = builder.build(organized_content)
+            pptx_bytes = builder.build(enriched_content)
 
             duration = (datetime.now() - start_time).total_seconds()
 
@@ -240,11 +310,12 @@ class PPTServiceV2:
                 "result": pptx_bytes,
                 "stats": {
                     "template": template_path.name,
-                    "slide_count": len(organized_content.get("slides", [])),
+                    "slide_count": len(enriched_content.get("slides", [])),
+                    "image_count": total_images,
                     "duration_seconds": duration,
                     "file_size": len(pptx_bytes),
                 },
-                "draft_content": draft_content,  # 可選：返回草稿供除錯
+                "draft_content": draft_content,
             }
 
         except Exception as e:
@@ -265,9 +336,24 @@ class PPTServiceV2:
         slide_count: int = 10,
         audience: str | None = None,
         language: str = "zh-TW",
+        add_images: bool = True,
+        images_per_slide: int = 1,
     ) -> Path:
         """
         生成簡報並存檔
+
+        Args:
+            user_input: 使用者的 markdown/text 輸入
+            output_path: 輸出檔案路徑
+            template: Template 檔案名稱
+            slide_count: 目標投影片數量
+            audience: 目標受眾
+            language: 輸出語言
+            add_images: 是否自動加入圖片
+            images_per_slide: 每張投影片的圖片數量
+
+        Returns:
+            輸出檔案路徑
         """
         pptx_bytes = await self.generate(
             user_input=user_input,
@@ -275,6 +361,8 @@ class PPTServiceV2:
             slide_count=slide_count,
             audience=audience,
             language=language,
+            add_images=add_images,
+            images_per_slide=images_per_slide,
         )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)

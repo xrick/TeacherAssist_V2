@@ -23,6 +23,9 @@ class GenerationRequest(BaseModel):
     slide_count: int | None = Field(
         None, description="Target number of slides (auto-determined if not provided)"
     )
+    add_images: bool = Field(True, description="Whether to automatically add images to slides")
+    images_per_slide: int = Field(1, ge=0, le=3, description="Number of images per slide (0-3)")
+    language: str = Field("zh-TW", description="Output language for the presentation")
 
     model_config = {
         "json_schema_extra": {
@@ -34,6 +37,9 @@ class GenerationRequest(BaseModel):
                 "audience": "professionals",
                 "tone": "professional",
                 "slide_count": 10,
+                "add_images": True,
+                "images_per_slide": 1,
+                "language": "zh-TW",
             }
         }
     }
@@ -46,6 +52,7 @@ class GenerationResponse(BaseModel):
     message: str
     presentation_id: str = Field(..., description="Unique ID for the presentation")
     slide_count: int = Field(..., description="Number of slides generated")
+    image_count: int = Field(0, description="Number of images added")
     download_url: str | None = Field(None, description="URL to download the PPTX file")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
