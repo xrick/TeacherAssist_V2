@@ -13,6 +13,7 @@ import json
 import logging
 from typing import Any
 
+from app.pptagent_core.roles.input_classifier import InputMode
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -23,22 +24,35 @@ CONTENT_GENERATOR_SYSTEM = """<system-instruction>
 You are an experienced and skilled Presentation Specialist (PPTX Expert). You excel at structuring complex information into clear, compelling narratives suitable for professional slides.
 </system-instruction>
 
+<Input_Data>
+  <User_Topic>
+  {{USER_TOPIC_HERE}}
+  </User_Topic>
+
+  <Target_Slide_Count>
+  {{SLIDE_COUNT}}
+  </Target_Slide_Count>
+
+  <Retrieved_Context>
+  {{RAG_DOCUMENTS_HERE}}
+  </Retrieved_Context>
+</Input_Data>
+
 <Task>
-1. **Analyze & Expand:** Deepen the user's input by adding relevant details, examples, or data to ensure the content is comprehensive.
-2. **Structure:** Organize the content into a logical flow (e.g., Introduction, Problem, Solution, Conclusion).
+1. **Synthesize & Ground:** Analyze the <User_Topic> and enrich it using *only* the information provided in <Retrieved_Context>.
+2. **Structure:** Plan the presentation to fit exactly **{{SLIDE_COUNT}} slides**. Distribute the content evenly across these slides (e.g., if 5 slides: 1 Title, 1 Intro, 2 Details, 1 Conclusion).
 3. **Draft Slides:** Break the content down into specific slides. For each slide, provide:
     * **Slide Title:** Catchy and relevant.
-    * **Bullet Points:** Concise key takeaways (avoid walls of text).
-    * **Visual Suggestion:** A brief description of an image, chart, or icon to support the point.
-    * **Speaker Notes:** A short script or elaboration for the presenter.
+    * **Bullet Points:** Concise key takeaways (under 15 words each).
+    * **Visual Suggestion:** A concrete description + 2 keywords.
+    * **Speaker Notes:** Script for the presenter.
 </Task>
 
 <Constraints>
-* Keep the language professional yet accessible (easy to understand).
-* Ensure the tone is engaging and persuasive.
-* Prioritize clarity and brevity in the bullet points.
-* Each bullet point should be under 15 words.
-* Preserve technical terms in their original language (e.g., Machine Learning, API, GPU).
+* **Quantity Control:** You must generate exactly {{SLIDE_COUNT}} slides. No more, no less.
+* **Source Truth:** Do not hallucinate. Use only the <Retrieved_Context>.
+* **Language & Tone:** Professional, engaging, accessible.
+* **JSON Safety:** Ensure all strings are properly escaped to prevent JSON parsing errors.
 </Constraints>
 
 <OutputFormat>
@@ -52,19 +66,14 @@ Return a JSON object with the following structure:
       "slide_type": "title|content|section|closing",
       "title": "Slide Title",
       "bullet_points": ["Point 1", "Point 2", "Point 3"],
-      "visual_suggestion": "Description of recommended visual",
+      "visual_suggestion": "Image description. Keywords: tag1, tag2",
       "speaker_notes": "What the presenter should say"
     }
   ]
 }
 </OutputFormat>
 
-CRITICAL RULES:
-1. Your response MUST be ONLY a valid JSON object.
-2. Do NOT include any text, explanation, or markdown code blocks.
-3. Start your response directly with { and end with }.
-4. Do NOT wrap JSON in ```json``` or any markdown formatting.
-5. Ensure all strings are properly escaped and all brackets are closed."""
+Return ONLY valid JSON, no additional text or explanation."""
 
 
 class ContentGenerator:
@@ -84,6 +93,7 @@ class ContentGenerator:
         slide_count: int | None = None,
         audience: str | None = None,
         language: str = "zh-TW",
+        input_mode: InputMode = InputMode.DIRECT,
         max_json_retries: int = 2,
     ) -> dict[str, Any]:
         """
@@ -94,15 +104,16 @@ class ContentGenerator:
             slide_count: 建議的投影片數量（可選）
             audience: 目標受眾（可選）
             language: 輸出語言
+            input_mode: 輸入模式（SEARCH=短題目, DIRECT=長文章）
             max_json_retries: JSON 解析失敗時的最大重試次數
 
         Returns:
             結構化的投影片內容
         """
-        logger.info(f"生成內容: {len(user_input)} 字元輸入")
+        logger.info(f"生成內容: {len(user_input)} 字元輸入, 模式={input_mode.value}")
 
-        # 建立 User Prompt
-        user_prompt = self._build_prompt(user_input, slide_count, audience, language)
+        # 建立 User Prompt（根據輸入模式調整策略）
+        user_prompt = self._build_prompt(user_input, slide_count, audience, language, input_mode)
 
         last_error = None
         for attempt in range(1 + max_json_retries):
@@ -165,8 +176,15 @@ class ContentGenerator:
         slide_count: int | None,
         audience: str | None,
         language: str,
+        input_mode: InputMode = InputMode.DIRECT,
     ) -> str:
-        """建立 User Prompt"""
+        """
+        建立 User Prompt
+
+        根據 input_mode 調整指令策略：
+        - SEARCH: 短題目 → 要求 LLM 從零生成完整內容
+        - DIRECT: 長文章 → 要求 LLM 結構化已有內容
+        """
         parts = []
 
         # 額外指示
@@ -178,13 +196,31 @@ class ContentGenerator:
 
         parts.append(f"Output language: {language}")
 
-        # 使用者輸入
-        parts.append(f"""
+        # 根據模式調整指令
+        if input_mode == InputMode.SEARCH:
+            # 短題目模式：LLM 需要自行生成完整內容
+            parts.append(f"""
+<user_topic>
+{user_input}
+</user_topic>
+
+The user has provided a short topic or keyword. You must:
+1. Generate comprehensive, detailed content about this topic from your knowledge.
+2. Cover multiple aspects and sub-topics to fill the target slide count.
+3. Include relevant examples, data points, and key concepts.
+4. Structure everything into a professional presentation.""")
+        else:
+            # 長文章模式：LLM 結構化已有內容
+            parts.append(f"""
 <user_input>
 {user_input}
 </user_input>
 
-Please analyze and expand this content into a professional presentation structure.""")
+The user has provided detailed content. You must:
+1. Analyze and organize this existing content into slides.
+2. Preserve the key information and main arguments.
+3. Condense and restructure for clarity and visual impact.
+4. Do NOT add information beyond what the user provided.""")
 
         return "\n\n".join(parts)
 

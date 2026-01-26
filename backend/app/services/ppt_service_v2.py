@@ -21,6 +21,7 @@ from app.core.config import settings
 from app.pptagent_core.roles.content_generator import ContentGenerator
 from app.pptagent_core.roles.content_organizer_v2 import ContentOrganizerV2
 from app.pptagent_core.roles.image_enricher import ImageEnricher
+from app.pptagent_core.roles.input_classifier import classify_user_input
 from app.pptagent_core.roles.slide_builder import SlideBuilder
 from app.pptagent_core.roles.template_analyzer import TemplateAnalyzer
 from app.services.llm_service import LLMService, get_llm_service
@@ -113,6 +114,13 @@ class PPTServiceV2:
                 include_closing=True,
             )
 
+            # Stage 1.5: 分類使用者輸入
+            classification = classify_user_input(user_input)
+            logger.info(
+                f"輸入分類: {classification.mode.value} "
+                f"(信心度={classification.confidence}) {classification.reason}"
+            )
+
             # Stage 2: 生成內容草稿
             logger.info(f"[2/{total_stages}] LLM 擴展使用者輸入...")
             generator = ContentGenerator(self.llm)
@@ -121,6 +129,7 @@ class PPTServiceV2:
                 slide_count=slide_count,
                 audience=audience,
                 language=language,
+                input_mode=classification.mode,
             )
 
             # Stage 3: 組織內容到 Template 結構
@@ -220,10 +229,23 @@ class PPTServiceV2:
                 "message": f"Template 分析完成: {template_structure['slide_count']} 張投影片結構",
             }
 
+            # Stage 1.5: 分類使用者輸入
+            classification = classify_user_input(user_input)
+            mode_label = (
+                "短題目 → 生成模式"
+                if classification.mode.value == "SEARCH_MODE"
+                else "長文章 → 結構化模式"
+            )
+            yield {
+                "stage": "input_classification",
+                "progress": 10,
+                "message": f"輸入分類: {mode_label} (信心度 {classification.confidence:.0%})",
+            }
+
             # Stage 2: 生成內容草稿 (10-45% or 10-50%)
             yield {
                 "stage": "content_generation",
-                "progress": 10,
+                "progress": 12,
                 "message": "LLM 正在擴展和結構化內容...",
             }
 
@@ -233,6 +255,7 @@ class PPTServiceV2:
                 slide_count=slide_count,
                 audience=audience,
                 language=language,
+                input_mode=classification.mode,
             )
 
             progress_after_content = 45 if add_images else 50
