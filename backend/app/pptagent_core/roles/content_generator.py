@@ -59,7 +59,12 @@ Return a JSON object with the following structure:
 }
 </OutputFormat>
 
-Return ONLY valid JSON, no additional text or explanation."""
+CRITICAL RULES:
+1. Your response MUST be ONLY a valid JSON object.
+2. Do NOT include any text, explanation, or markdown code blocks.
+3. Start your response directly with { and end with }.
+4. Do NOT wrap JSON in ```json``` or any markdown formatting.
+5. Ensure all strings are properly escaped and all brackets are closed."""
 
 
 class ContentGenerator:
@@ -79,6 +84,7 @@ class ContentGenerator:
         slide_count: int | None = None,
         audience: str | None = None,
         language: str = "zh-TW",
+        max_json_retries: int = 2,
     ) -> dict[str, Any]:
         """
         從使用者輸入生成投影片內容
@@ -88,6 +94,7 @@ class ContentGenerator:
             slide_count: 建議的投影片數量（可選）
             audience: 目標受眾（可選）
             language: 輸出語言
+            max_json_retries: JSON 解析失敗時的最大重試次數
 
         Returns:
             結構化的投影片內容
@@ -97,32 +104,60 @@ class ContentGenerator:
         # 建立 User Prompt
         user_prompt = self._build_prompt(user_input, slide_count, audience, language)
 
-        # 呼叫 LLM
-        try:
-            response = await self.llm.generate(
-                prompt=user_prompt,
-                system_prompt=CONTENT_GENERATOR_SYSTEM,
-                temperature=0.7,
-                max_tokens=8000,
-            )
+        last_error = None
+        for attempt in range(1 + max_json_retries):
+            # 第一次用原始 prompt，重試時加入更強的 JSON 約束
+            if attempt == 0:
+                prompt = user_prompt
+                system = CONTENT_GENERATOR_SYSTEM
+                temp = 0.3
+            else:
+                logger.warning(
+                    f"JSON 解析失敗，第 {attempt} 次重試（降低 temperature，強化 prompt）"
+                )
+                prompt = (
+                    user_prompt + "\n\nIMPORTANT: You MUST respond with ONLY a valid JSON object. "
+                    "Do NOT include any text, explanation, or markdown formatting before or after the JSON. "
+                    "Start your response with { and end with }."
+                )
+                system = CONTENT_GENERATOR_SYSTEM
+                temp = 0.1
 
-            logger.info(
-                f"內容生成完成: {response.usage.total_tokens} tokens, "
-                f"${response.usage.cost_usd:.4f}"
-            )
+            # 呼叫 LLM
+            try:
+                response = await self.llm.generate(
+                    prompt=prompt,
+                    system_prompt=system,
+                    temperature=temp,
+                    max_tokens=8000,
+                )
 
-            # 解析 JSON
-            content = self._parse_json_response(response.content)
+                logger.info(
+                    f"內容生成完成 (attempt {attempt + 1}): "
+                    f"{response.usage.total_tokens} tokens, "
+                    f"${response.usage.cost_usd:.4f}"
+                )
 
-            # 驗證結構
-            self._validate_content(content)
+                # 解析 JSON
+                content = self._parse_json_response(response.content)
 
-            logger.info(f"生成 {len(content.get('slides', []))} 張投影片草稿")
-            return content
+                # 驗證結構
+                self._validate_content(content)
 
-        except Exception as e:
-            logger.error(f"內容生成失敗: {e}", exc_info=True)
-            raise
+                logger.info(f"生成 {len(content.get('slides', []))} 張投影片草稿")
+                return content
+
+            except json.JSONDecodeError as e:
+                last_error = e
+                logger.warning(f"JSON 解析失敗 (attempt {attempt + 1}/{1 + max_json_retries}): {e}")
+                continue
+            except Exception as e:
+                logger.error(f"內容生成失敗: {e}", exc_info=True)
+                raise
+
+        # 所有重試都失敗
+        logger.error(f"JSON 解析在 {1 + max_json_retries} 次嘗試後仍然失敗")
+        raise last_error  # type: ignore[misc]
 
     def _build_prompt(
         self,
@@ -157,14 +192,48 @@ Please analyze and expand this content into a professional presentation structur
         """解析 LLM 回應中的 JSON"""
         import re
 
+        # Debug: 記錄原始回應以便排查
+        logger.debug(f"LLM 原始回應 (前 500 字元): {content[:500]!r}")
+
+        # 空值檢查
+        if not content or not content.strip():
+            raise json.JSONDecodeError("LLM 回傳空內容，無法解析 JSON", content or "", 0)
+
         def clean_json(text: str) -> str:
             """清理 JSON 中的常見問題"""
+            # 移除 trailing commas
             text = re.sub(r",\s*([}\]])", r"\1", text)
+            # 移除控制字元（保留換行和 tab）
+            text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
             return text
 
         def fix_missing_brackets(text: str) -> str:
             """修復缺少的括號"""
             text = re.sub(r"(\})\s*\},\s*\{", r"\1]\n    }, {", text)
+            return text
+
+        def fix_truncated_json(text: str) -> str:
+            """嘗試修復被截斷的 JSON"""
+            # 計算未關閉的括號
+            open_braces = text.count("{") - text.count("}")
+            open_brackets = text.count("[") - text.count("]")
+
+            if open_braces > 0 or open_brackets > 0:
+                # 移除最後一個不完整的元素
+                # 找到最後一個完整的 }, 或 ] 後截斷
+                last_complete = max(
+                    text.rfind("},"),
+                    text.rfind("],"),
+                    text.rfind("}]"),
+                )
+                if last_complete > 0:
+                    text = text[: last_complete + 1]
+                    # 如果結尾是 }, 移除逗號
+                    text = text.rstrip().rstrip(",")
+
+                # 補上缺少的括號
+                text += "]" * open_brackets + "}" * open_braces
+
             return text
 
         def try_parse(text: str) -> dict[str, Any] | None:
@@ -173,6 +242,8 @@ Please analyze and expand this content into a professional presentation structur
                 text,
                 clean_json(text),
                 fix_missing_brackets(text),
+                fix_truncated_json(text),
+                fix_truncated_json(clean_json(text)),
                 fix_missing_brackets(clean_json(text)),
                 clean_json(fix_missing_brackets(text)),
             ]
@@ -214,6 +285,8 @@ Please analyze and expand this content into a professional presentation structur
             if result:
                 return result
 
+        # 記錄完整回應內容供除錯
+        logger.error(f"無法解析 JSON，LLM 完整回應:\n{content}")
         raise json.JSONDecodeError("No valid JSON found", content, 0)
 
     def _validate_content(self, content: dict[str, Any]) -> None:
