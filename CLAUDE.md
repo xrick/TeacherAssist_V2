@@ -134,3 +134,79 @@ ollama serve
 1. System prompt 中 `{{USER_TOPIC_HERE}}` 等 placeholder 未被 `_build_prompt()` 替換（原有問題）
 2. 分類器 `length_threshold=150` 可能需實測調整
 3. 前端尚未處理 `input_classification` SSE 事件
+
+### 2026-01-28：Template 整併 (7→5) + PPTX 管線排版分析
+
+**狀態**: Template 整併已完成；排版問題分析完成，待決定改善路線
+
+#### 完成：Template 整併 (7→5)
+
+**背景**: 原有 7 個模板，確認保留 5 個：`education_basic`、`industrial_tech`、`professional_corporate`、`strategic_consulting`、`visionary_story`。
+
+**執行內容**:
+
+1. **清理舊檔案**：刪除 4 張舊 preview PNG（`nature_artistic`、`modern_clean`、`pastoral_style`、`creative_colorful`），對應 JSON 已在之前刪除
+2. **修正檔名**：`visionary_story.json.json` → `visionary_story.json`（雙副檔名問題）
+3. **重寫 preview 生成器**：`backend/data/templates/create_preview_images.py`
+   - 5 個函式分別產生各模板的 400×225 wireframe 風格 PNG
+4. **程式碼生成新 PPTX**：`backend/data/templates/create_new_templates.py`
+   - 以 `education_basic.pptx` 為 base，透過 XML blob 修改 color theme
+   - 產出 `strategic_consulting.pptx` (155KB) 和 `visionary_story.pptx` (156KB)
+5. **驗證**：5 個模板皆有完整的 JSON + PPTX + Preview PNG
+
+**新增/修改檔案**:
+- `backend/data/templates/create_preview_images.py` — 重寫
+- `backend/data/templates/create_new_templates.py` — 新增
+- `backend/data/templates/strategic_consulting.pptx` — 新增
+- `backend/data/templates/visionary_story.pptx` — 新增
+- `backend/data/templates/visionary_story.json` — 改名
+- `backend/data/templates/previews/*.png` — 5 張重新生成
+
+#### 完成：PPTX 排版管線深度分析
+
+針對使用者需求「容易做文字排版，圖片能放置到正確位置」，對整條管線進行分析。
+
+**分析範圍**:
+- `SlideBuilder.build()` / `_fill_slide_content()` / `_place_images()`
+- `TemplateAnalyzer.get_available_layouts()` / `suggest_layout_sequence()` / `create_slide_structure()`
+- `ContentOrganizerV2._determine_layout_type()`
+- `AutoFitter.fit_text()` / `TextMetrics.measure_text()`
+- 5 個 PPTX 模板的所有 slide layout placeholder 位置與尺寸
+
+**發現的嚴重問題**:
+
+| # | 問題 | 嚴重度 | 影響範圍 |
+|---|------|--------|----------|
+| 1 | education_basic 系 (含 strategic_consulting、visionary_story) 所有 placeholder idx=0，`content_map` dict 鍵值衝突，標題與內文無法同時填入 | **致命** | 3/5 模板 |
+| 2 | education_basic 系 TITLE 在底部 (y=5.25")，OBJECT 在頂部 (y=0.00")，版面倒置 | 高 | 3/5 模板 |
+| 3 | 僅 `professional_corporate` Layout 15 有 PICTURE placeholder，其餘 4 模板完全沒有 | 高 | 4/5 模板 |
+| 4 | `_place_images()` 只處理第一張圖片，位置硬編碼不參考 layout | 中 | 全部 |
+| 5 | `AutoFitter` 硬編碼 Arial 字體、單一段落填入，失去 bullet list 格式 | 中 | 全部 |
+
+**模板品質評估**:
+
+| 模板 | 尺寸 | Layout 數 | idx 唯一 | PICTURE ph | TITLE 位置 | 排版可行性 |
+|------|------|-----------|----------|------------|-----------|-----------|
+| professional_corporate | 10.0"×5.6" | 24 | **是** | **有** | 頂部 (0.80") | **高** |
+| industrial_tech | 10.0"×5.6" | 12 | 否 | 無 | 頂部 (0.22") | 中 |
+| education_basic | 13.3"×7.5" | 12 | 否 | 無 | 底部 (5.25") | 低 |
+| strategic_consulting | 13.3"×7.5" | 12 | 否 | 無 | 底部 (5.25") | 低 |
+| visionary_story | 13.3"×7.5" | 12 | 否 | 無 | 底部 (5.25") | 低 |
+
+#### 待決定：改善路線
+
+**路線 A — 以 `professional_corporate` 為唯一 base，其他模板只改顏色主題**
+- 優點：立即可用，程式碼改動最小
+- 缺點：所有模板共用 10.0"×5.6" 尺寸
+
+**路線 B — 修復所有模板 + 修復程式碼**
+- 重建 education_basic 系 PPTX 使其有正確 idx 值
+- 修改 `_fill_slide_content()` 支援位置匹配
+- 修改 `_place_images()` 使用 PICTURE placeholder
+- 修改 `AutoFitter` 支援多段落 / bullet list
+
+**影響的程式碼路徑**:
+- `backend/app/pptagent_core/roles/slide_builder.py` — `_fill_slide_content()`, `_place_images()`
+- `backend/app/pptagent_core/layout_engine/auto_fitter.py` — `AutoFitter.fit_text()`
+- `backend/app/pptagent_core/roles/template_analyzer.py` — `get_available_layouts()` (需記錄 position/size)
+- `backend/data/templates/*.pptx` — 可能需重建
