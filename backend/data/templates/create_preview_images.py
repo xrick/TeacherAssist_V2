@@ -1,9 +1,13 @@
 """
-Generate preview images for template styles
+Generate preview images for template styles.
+
+Each preview is a 400x225 (16:9) wireframe-style thumbnail
+that visually represents the template's color scheme and layout.
 """
 
-from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
+
+from PIL import Image, ImageDraw
 
 # Preview image size (16:9 aspect ratio)
 WIDTH = 400
@@ -13,120 +17,193 @@ PREVIEWS_DIR = Path(__file__).parent / "previews"
 PREVIEWS_DIR.mkdir(exist_ok=True)
 
 
+def create_professional_corporate():
+    """企業專業風格 — 深藍＋金色，穩重對稱佈局"""
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#1e3a8a")  # 深藍底
+    draw = ImageDraw.Draw(img)
+
+    # 頂部金色裝飾線
+    draw.rectangle([0, 0, WIDTH, 5], fill="#d4a843")
+
+    # 標題區
+    draw.rectangle([30, 25, 230, 50], fill="#ffffff")  # 標題 placeholder
+    draw.rectangle([30, 58, 130, 68], fill="#d4a843")  # 金色副標題
+
+    # 內容區白底
+    draw.rectangle([30, 85, WIDTH - 30, HEIGHT - 25], fill="#ffffff")
+
+    # 內容區：左側文字行
+    draw.rectangle([45, 100, 180, 115], fill="#1e3a8a")  # 深色標題
+    draw.rectangle([45, 125, 260, 133], fill="#cbd5e1")  # 灰色文字
+    draw.rectangle([45, 142, 230, 150], fill="#e2e8f0")  # 灰色文字
+    draw.rectangle([45, 159, 250, 167], fill="#e2e8f0")  # 灰色文字
+
+    # 右側金色豎線裝飾
+    draw.rectangle([WIDTH - 60, 100, WIDTH - 55, HEIGHT - 35], fill="#d4a843")
+
+    img.save(PREVIEWS_DIR / "professional_corporate.png")
+    print("Created: professional_corporate.png")
+
+
 def create_education_basic():
-    """教育基礎風格 - 藍色系，清晰專業"""
-    img = Image.new('RGB', (WIDTH, HEIGHT), '#1e40af')  # 深藍底
+    """學術研究風格 — 藍色系，結構化列點佈局"""
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#1e40af")  # 深藍底
     draw = ImageDraw.Draw(img)
 
     # 標題區
-    draw.rectangle([0, 0, WIDTH, 60], fill='#1e3a8a')
-    draw.rectangle([20, 20, 200, 45], fill='#60a5fa')  # 標題placeholder
+    draw.rectangle([0, 0, WIDTH, 65], fill="#1e3a8a")
+    draw.rectangle([25, 20, 210, 48], fill="#60a5fa")  # 標題 placeholder
 
-    # 內容區
-    draw.rectangle([20, 80, WIDTH-20, HEIGHT-20], fill='#ffffff')
+    # 內容區白底
+    draw.rectangle([20, 80, WIDTH - 20, HEIGHT - 18], fill="#ffffff")
 
-    # 模擬內容列表
+    # 列點清單
     for i in range(4):
         y = 95 + i * 28
-        draw.ellipse([35, y, 45, y+10], fill='#3b82f6')
-        draw.rectangle([55, y, 250, y+10], fill='#e5e7eb')
+        draw.ellipse([38, y, 48, y + 10], fill="#3b82f6")  # 藍色圓點
+        draw.rectangle([58, y, 260, y + 10], fill="#e5e7eb")  # 灰色文字行
 
-    # 側邊裝飾
-    draw.rectangle([WIDTH-60, 90, WIDTH-30, HEIGHT-30], fill='#dbeafe')
+    # 右側裝飾面板
+    draw.rectangle([WIDTH - 65, 88, WIDTH - 28, HEIGHT - 26], fill="#dbeafe")
 
     img.save(PREVIEWS_DIR / "education_basic.png")
     print("Created: education_basic.png")
 
 
-def create_modern_clean():
-    """現代簡約風格 - 灰白色系，極簡設計"""
-    img = Image.new('RGB', (WIDTH, HEIGHT), '#f8fafc')  # 淺灰白底
+def create_industrial_tech():
+    """工業科技風格 — 深灰＋橙色，金屬質感"""
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#374151")  # 深灰底
     draw = ImageDraw.Draw(img)
 
-    # 左側色塊
-    draw.rectangle([0, 0, 15, HEIGHT], fill='#0f172a')
+    # 左側橙色豎條
+    draw.rectangle([0, 0, 10, HEIGHT], fill="#ea580c")
 
     # 標題區
-    draw.rectangle([40, 30, 250, 55], fill='#1e293b')
-    draw.rectangle([40, 65, 150, 75], fill='#94a3b8')
+    draw.rectangle([30, 18, 200, 42], fill="#ffffff")  # 白色標題
+    draw.rectangle([WIDTH - 100, 22, WIDTH - 30, 34], fill="#6b7280")  # 右上小灰塊
 
-    # 內容卡片
-    draw.rectangle([40, 100, 180, 200], fill='#ffffff', outline='#e2e8f0', width=2)
-    draw.rectangle([50, 115, 170, 130], fill='#cbd5e1')
-    draw.rectangle([50, 140, 140, 150], fill='#e2e8f0')
-    draw.rectangle([50, 160, 160, 170], fill='#e2e8f0')
+    # 內容區淺灰底
+    draw.rectangle([30, 60, WIDTH - 30, HEIGHT - 18], fill="#f3f4f6")
 
-    draw.rectangle([200, 100, 340, 200], fill='#ffffff', outline='#e2e8f0', width=2)
-    draw.rectangle([210, 115, 330, 130], fill='#cbd5e1')
-    draw.rectangle([210, 140, 300, 150], fill='#e2e8f0')
-    draw.rectangle([210, 160, 320, 170], fill='#e2e8f0')
+    # 橙色圓點列表
+    for i in range(3):
+        y = 78 + i * 35
+        draw.ellipse([48, y, 58, y + 10], fill="#ea580c")
+        draw.rectangle([68, y, 240, y + 10], fill="#4b5563")
 
-    img.save(PREVIEWS_DIR / "modern_clean.png")
-    print("Created: modern_clean.png")
+    # 右側橙框圖表 placeholder
+    draw.rectangle(
+        [WIDTH - 100, 72, WIDTH - 45, HEIGHT - 30], fill="#1f2937", outline="#ea580c", width=2
+    )
+    # 圖表內部橫線
+    for i in range(3):
+        y = 90 + i * 28
+        draw.rectangle([WIDTH - 90, y, WIDTH - 55, y + 8], fill="#4b5563")
+
+    # 底部細灰線
+    draw.rectangle([0, HEIGHT - 4, WIDTH, HEIGHT], fill="#6b7280")
+
+    img.save(PREVIEWS_DIR / "industrial_tech.png")
+    print("Created: industrial_tech.png")
 
 
-def create_creative_colorful():
-    """創意多彩風格 - 鮮豔漸層，活潑設計"""
-    img = Image.new('RGB', (WIDTH, HEIGHT), '#fef3c7')  # 淡黃底
+def create_strategic_consulting():
+    """策略顧問風格 — 極簡冷灰，2x2 矩陣佈局（MECE）"""
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#f8fafc")  # 極淺灰底
     draw = ImageDraw.Draw(img)
 
-    # 漸層效果模擬（使用色塊）
-    draw.polygon([(0, 0), (150, 0), (100, HEIGHT), (0, HEIGHT)], fill='#f97316')
-    draw.polygon([(WIDTH, 0), (WIDTH, HEIGHT), (300, HEIGHT), (350, 0)], fill='#ec4899')
+    # 頂部深藍窄橫條
+    draw.rectangle([0, 0, WIDTH, 8], fill="#1e3a5f")
 
-    # 中央內容區
-    draw.rounded_rectangle([60, 40, WIDTH-60, HEIGHT-40], radius=15, fill='#ffffff')
+    # 右上角小方塊裝飾
+    draw.rectangle([WIDTH - 35, 18, WIDTH - 15, 38], fill="#1e3a5f")
 
-    # 標題
-    draw.rectangle([80, 55, 220, 75], fill='#7c3aed')
+    # 標題區
+    draw.rectangle([25, 22, 200, 42], fill="#1e3a5f")  # 深藍標題
+    draw.rectangle([25, 50, 140, 58], fill="#94a3b8")  # 冷灰副標題
 
-    # 彩色裝飾點
-    colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
-    for i, color in enumerate(colors):
-        draw.ellipse([80 + i*50, 95, 100 + i*50, 115], fill=color)
+    # 2x2 矩陣（MECE 四象限）
+    cx, cy = 25, 72  # 起始座標
+    cw, ch = 168, 65  # 每格寬高
+    gap = 12
 
-    # 內容區塊
-    draw.rounded_rectangle([80, 130, 180, 185], radius=8, fill='#fef3c7')
-    draw.rounded_rectangle([195, 130, 295, 185], radius=8, fill='#dcfce7')
+    # 左上
+    draw.rectangle([cx, cy, cx + cw, cy + ch], fill="#e2e8f0", outline="#cbd5e1", width=1)
+    draw.rectangle([cx + 10, cy + 12, cx + 80, cy + 20], fill="#64748b")
+    draw.rectangle([cx + 10, cy + 30, cx + 120, cy + 37], fill="#cbd5e1")
+    draw.rectangle([cx + 10, cy + 44, cx + 100, cy + 51], fill="#cbd5e1")
 
-    img.save(PREVIEWS_DIR / "creative_colorful.png")
-    print("Created: creative_colorful.png")
+    # 右上
+    rx = cx + cw + gap
+    draw.rectangle([rx, cy, rx + cw, cy + ch], fill="#e2e8f0", outline="#cbd5e1", width=1)
+    draw.rectangle([rx + 10, cy + 12, rx + 80, cy + 20], fill="#64748b")
+    draw.rectangle([rx + 10, cy + 30, rx + 120, cy + 37], fill="#cbd5e1")
+    draw.rectangle([rx + 10, cy + 44, rx + 100, cy + 51], fill="#cbd5e1")
+
+    # 左下
+    by = cy + ch + gap
+    draw.rectangle([cx, by, cx + cw, by + ch], fill="#e2e8f0", outline="#cbd5e1", width=1)
+    draw.rectangle([cx + 10, by + 12, cx + 80, by + 20], fill="#64748b")
+    draw.rectangle([cx + 10, by + 30, cx + 120, by + 37], fill="#cbd5e1")
+    draw.rectangle([cx + 10, by + 44, cx + 100, by + 51], fill="#cbd5e1")
+
+    # 右下
+    draw.rectangle([rx, by, rx + cw, by + ch], fill="#e2e8f0", outline="#cbd5e1", width=1)
+    draw.rectangle([rx + 10, by + 12, rx + 80, by + 20], fill="#64748b")
+    draw.rectangle([rx + 10, by + 30, rx + 120, by + 37], fill="#cbd5e1")
+    draw.rectangle([rx + 10, by + 44, rx + 100, by + 51], fill="#cbd5e1")
+
+    # 底部冷灰細線
+    draw.rectangle([25, HEIGHT - 10, WIDTH - 25, HEIGHT - 8], fill="#94a3b8")
+
+    img.save(PREVIEWS_DIR / "strategic_consulting.png")
+    print("Created: strategic_consulting.png")
 
 
-def create_nature_artistic():
-    """自然藝術風格 - 綠色系，自然元素"""
-    img = Image.new('RGB', (WIDTH, HEIGHT), '#ecfdf5')  # 淡綠底
+def create_visionary_story():
+    """願景敘事風格 — 暗色電影感，大量留白居中佈局"""
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#0f172a")  # 近黑深藍底
     draw = ImageDraw.Draw(img)
 
-    # 底部山脈/自然形狀
-    draw.polygon([(0, HEIGHT), (0, 160), (80, 130), (150, 170), (220, 120), (300, 150), (WIDTH, 140), (WIDTH, HEIGHT)], fill='#86efac')
-    draw.polygon([(0, HEIGHT), (50, 170), (120, 150), (200, 180), (280, 140), (350, 160), (WIDTH, 150), (WIDTH, HEIGHT)], fill='#4ade80')
+    # 頂部微弱漸層裝飾線
+    draw.rectangle([0, 0, WIDTH, 2], fill="#334155")
 
-    # 上方標題區
-    draw.rounded_rectangle([30, 25, 280, 55], radius=10, fill='#166534')
+    # 中央大面積影像 placeholder（深灰矩形帶微弱邊框）
+    img_x1, img_y1 = 50, 30
+    img_x2, img_y2 = WIDTH - 50, 140
+    draw.rectangle([img_x1, img_y1, img_x2, img_y2], fill="#1e293b", outline="#334155", width=1)
 
-    # 內容卡片（帶自然感圓角）
-    draw.rounded_rectangle([30, 70, 190, 140], radius=12, fill='#ffffff', outline='#22c55e', width=2)
-    draw.rectangle([45, 85, 175, 95], fill='#bbf7d0')
-    draw.rectangle([45, 105, 140, 115], fill='#dcfce7')
-    draw.rectangle([45, 120, 160, 130], fill='#dcfce7')
+    # 影像 placeholder 中央的播放鍵三角形（暗示影片/電影感）
+    tri_cx, tri_cy = (img_x1 + img_x2) // 2, (img_y1 + img_y2) // 2
+    tri_size = 15
+    draw.polygon(
+        [
+            (tri_cx - tri_size // 2, tri_cy - tri_size),
+            (tri_cx - tri_size // 2, tri_cy + tri_size),
+            (tri_cx + tri_size, tri_cy),
+        ],
+        fill="#475569",
+    )
 
-    draw.rounded_rectangle([205, 70, 365, 140], radius=12, fill='#ffffff', outline='#22c55e', width=2)
-    draw.rectangle([220, 85, 350, 95], fill='#bbf7d0')
-    draw.rectangle([220, 105, 315, 115], fill='#dcfce7')
-    draw.rectangle([220, 120, 335, 130], fill='#dcfce7')
+    # 居中標題線
+    title_w = 180
+    draw.rectangle([(WIDTH - title_w) // 2, 158, (WIDTH + title_w) // 2, 170], fill="#e2e8f0")
 
-    # 裝飾葉子形狀
-    draw.ellipse([350, 20, 380, 60], fill='#22c55e')
-    draw.ellipse([360, 35, 390, 70], fill='#16a34a')
+    # 居中副標題線（更細更短）
+    sub_w = 120
+    draw.rectangle([(WIDTH - sub_w) // 2, 180, (WIDTH + sub_w) // 2, 188], fill="#64748b")
 
-    img.save(PREVIEWS_DIR / "nature_artistic.png")
-    print("Created: nature_artistic.png")
+    # 底部微弱裝飾線
+    draw.rectangle([80, HEIGHT - 12, WIDTH - 80, HEIGHT - 10], fill="#334155")
+
+    img.save(PREVIEWS_DIR / "visionary_story.png")
+    print("Created: visionary_story.png")
 
 
 if __name__ == "__main__":
+    create_professional_corporate()
     create_education_basic()
-    create_modern_clean()
-    create_creative_colorful()
-    create_nature_artistic()
-    print(f"\nAll preview images created in: {PREVIEWS_DIR}")
+    create_industrial_tech()
+    create_strategic_consulting()
+    create_visionary_story()
+    print(f"\nAll 5 preview images created in: {PREVIEWS_DIR}")
