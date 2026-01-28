@@ -210,3 +210,31 @@ ollama serve
 - `backend/app/pptagent_core/layout_engine/auto_fitter.py` — `AutoFitter.fit_text()`
 - `backend/app/pptagent_core/roles/template_analyzer.py` — `get_available_layouts()` (需記錄 position/size)
 - `backend/data/templates/*.pptx` — 可能需重建
+
+#### 決定：採用路線 A 的變體 — 以 `education_basic.pptx` 為 base，修改其 XML 結構
+
+**討論結論**:
+- 路線 A 原方案（以 `professional_corporate` 為 base）被否決：版面太花俏、留白不足，不適合做 base template
+- 路線 B（全面修復所有模板 + 程式碼）工作量過大
+- **最終方案**：以 `education_basic.pptx` 為 base，透過 Python 腳本修改其 slide layout XML，補齊缺少的結構元素
+
+**education_basic.pptx 需要修改的項目**:
+
+| 修改項目 | 技術手段 |
+|---------|---------|
+| 為每個 placeholder 賦予唯一 idx | 修改 slideLayout XML 中 `<p:ph>` 的 `idx` 屬性 |
+| 將 TITLE 移到頂部 | 修改 `<a:off>` (位置) 和 `<a:ext>` (尺寸) |
+| 調整 OBJECT 內容區到 TITLE 下方 | 同上，調整 y 座標和高度 |
+| 新增含 PICTURE placeholder 的 layout | 複製現有 layout XML，加入 `<p:ph type="pic" idx="N"/>` |
+| 增加留白 margin | 調整各 placeholder 的 left/top/width/height |
+
+**XML 層面確認**:
+- `xml_idx=None` 即 PPTX 規範中省略 idx 屬性 = 預設值 0（合法但造成程式端衝突）
+- TITLE: `xml_type=title`，SUBTITLE: `xml_type=subTitle`，OBJECT: `xml_type=None`（即 body/content）
+- 修改方式：用 `pptagent_pptx` + `lxml` 操作 XML blob，與先前改 color theme 同一技術路線
+
+**程式碼端配合修改**:
+- `_fill_slide_content()` 改用 placeholder type + 位置匹配，而非只靠 idx
+- `_place_images()` 優先使用 PICTURE placeholder
+
+**狀態**: 待執行
