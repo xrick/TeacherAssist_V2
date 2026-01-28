@@ -1,5 +1,7 @@
 {
   "description": "融合工業美學與科技感的現代風格模板，採用深灰、橙色與金屬質感元素，展現創新力與執行力，適合製造業、工程技術、科技產品發表及技術研討會使用",
   "tags": ["工業", "科技", "製造", "技術", "創新"],
-  "preview_image": "/api/v1/static/templates/previews/industrial_tech.png"
+  "preview_image": "/api/v1/static/templates/previews/industrial_tech.png",
+  "prompt": "../prompts/industrial_tech_prompt.md",
+  "scenario": "工業製造現場、技術研討會、產品發表會、工程技術會議"
 }

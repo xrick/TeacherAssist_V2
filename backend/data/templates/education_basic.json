@@ -1,5 +1,7 @@
 {
-  "description": "適合教學使用的基礎教育模板，清晰易讀的藍色系設計",
-  "tags": ["教育", "教學", "基礎", "專業"],
-  "preview_image": "/api/v1/static/templates/previews/education_basic.png"
+  "description": "學術研究與深度分析模式",
+  "tags": ["教育", "教學", "研究", "學術", "基礎", "專業"],
+  "preview_image": "/api/v1/static/templates/previews/education_basic.png",
+  "prompt": "../prompts/academic_research_and_deep_analysis_mode.md",
+  "scenario": "論文報告、技術白皮書、深度調查、教學應用、課程設計"
 }

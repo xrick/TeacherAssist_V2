@@ -1,0 +1,7 @@
+{
+  "description": "極具感染力的電影感敘事風格模板，運用大氣的留白、高畫質滿版影像與優雅字體，營造情感共鳴與沉浸式體驗，專為講述品牌故事、願景發表與 TED 風格演講設計",
+  "tags": ["敘事", "願景", "電影感", "啟發", "TED風格", "情感"],
+  "preview_image": "/api/v1/static/templates/previews/visionary_story.png",
+  "prompt": "../prompts/visionary_story_prompt.md",
+  "scenario": "品牌故事發表、願景演講、創辦人路演 (Founder's Pitch)、個人經歷分享、TED 風格演講"
+}
