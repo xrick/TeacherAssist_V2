@@ -1,0 +1,7 @@
+{
+  "description": "專為高階管理與策略顧問設計的極簡專業模板，強調邏輯結構與資訊層級（MECE原則），採用穩重的深藍、冷灰與白色調，優化圖表與數據展示空間，適合年度計畫、季度檢討及企業轉型策略報告使用",
+  "tags": ["策略", "顧問", "商務", "規劃", "管理", "MECE", "QBR"],
+  "preview_image": "/api/v1/static/templates/previews/strategic_consulting.png",
+  "prompt": "../prompts/strategic_consulting_prompt.md",
+  "scenario": "年度策略會議、季度業務回報 (QBR)、管理顧問提案、組織重組計畫、投資人報告"
+}

@@ -2,6 +2,6 @@
   "description": "專為企業商務場合設計的專業風格模板，採用深藍與金色搭配，展現穩重權威與專業形象，適合正式會議、商業提案及高階主管簡報使用",
   "tags": ["專業", "企業", "商務", "正式", "權威"],
   "preview_image": "/api/v1/static/templates/previews/professional_corporate.png",
-  "prompt": "../prompts/professional_corporate.md",
+  "prompt": "../prompts/professional_corporate_prompt.md",
   "scenario": "企業商務場合、正式會議、商業提案、高階主管簡報"
 }
