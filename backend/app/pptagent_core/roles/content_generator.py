@@ -70,33 +70,21 @@ You are an experienced and skilled Presentation Specialist (PPTX Expert). You ex
 </system-instruction>
 
 <Input_Data>
-  <User_Topic>
-  {{USER_TOPIC_HERE}}
-  </User_Topic>
-
-  <Target_Slide_Count>
-  {{SLIDE_COUNT}}
-  </Target_Slide_Count>
-
-  <Retrieved_Context>
-  {{RAG_DOCUMENTS_HERE}}
-  </Retrieved_Context>
+  <User_Topic>{{USER_TOPIC_HERE}}</User_Topic>
+  <Target_Slide_Count>{{SLIDE_COUNT}}</Target_Slide_Count>
+  <Retrieved_Context>{{RAG_DOCUMENTS_HERE}}</Retrieved_Context>
 </Input_Data>
 
 <Task>
-1. **Synthesize & Ground:** Analyze the <User_Topic> and enrich it using *only* the information provided in <Retrieved_Context>.
-2. **Structure:** Plan the presentation to fit exactly **{{SLIDE_COUNT}} slides**. Distribute the content evenly across these slides (e.g., if 5 slides: 1 Title, 1 Intro, 2 Details, 1 Conclusion).
-3. **Draft Slides:** Break the content down into specific slides. For each slide, provide:
-    * **Slide Title:** Catchy and relevant.
-    * **Bullet Points:** Concise key takeaways (under 15 words each).
-    * **Visual Suggestion:** A concrete description + 2 keywords.
-    * **Speaker Notes:** Script for the presenter.
+1. **Synthesize & Ground:** Analyze the User_Topic using ONLY the information present in Retrieved_Context. Do not hallucinate or add information not present in the retrieved context.
+2. **Structure:** Plan the presentation to fit exactly {{SLIDE_COUNT}} slides. Allocate major themes or subtopics to different slides.
+3. **Draft Slides:** For each slide, provide structured content in the EXACT format specified below.
 </Task>
 
 <Constraints>
-* **Quantity Control:** You must generate exactly {{SLIDE_COUNT}} slides. No more, no less.
-* **Source Truth:** Do not hallucinate. Use only the <Retrieved_Context>.
-* **Language & Tone:** Professional, engaging, accessible.
+* **Quantity Control:** Generate EXACTLY {{SLIDE_COUNT}} slides. No more, no less.
+* **Source Truth:** Base all content on Retrieved_Context; do not invent facts, figures, or claims.
+* **Language & Tone:** Professional, engaging, accessible to a general audience.
 * **JSON Safety:** Ensure all strings are properly escaped to prevent JSON parsing errors.
 </Constraints>
 
@@ -108,14 +96,35 @@ Return a JSON object with the following structure:
   "slides": [
     {
       "slide_number": 1,
-      "slide_type": "title|content|section|closing",
-      "title": "Slide Title",
-      "bullet_points": ["Point 1", "Point 2", "Point 3"],
+      "layout_index": 0,
+      "layout": "title",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "Presentation Title"},
+        {"idx": 1, "type": "SUBTITLE", "content": "Subtitle or tagline"}
+      ],
+      "visual_suggestion": "Image description. Keywords: tag1, tag2",
+      "speaker_notes": "What the presenter should say"
+    },
+    {
+      "slide_number": 2,
+      "layout_index": 2,
+      "layout": "content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "Slide Title"},
+        {"idx": 1, "type": "BODY", "content": "• Bullet point 1\\n• Bullet point 2\\n• Bullet point 3"}
+      ],
       "visual_suggestion": "Image description. Keywords: tag1, tag2",
       "speaker_notes": "What the presenter should say"
     }
   ]
 }
+
+IMPORTANT RULES:
+1. Each slide MUST have a "placeholders" array with at least one placeholder
+2. TITLE placeholder uses idx=0, BODY/SUBTITLE uses idx=1
+3. For body content, use "• " prefix for bullet points and "\\n" to separate lines
+4. layout_index: 0=title slide, 2=content, 3=two-column, 10=closing
+5. layout: "title", "content", "two_column", "section", "closing"
 </OutputFormat>
 
 Return ONLY valid JSON, no additional text or explanation."""
@@ -416,7 +425,7 @@ The user has provided detailed content. You must:
         raise json.JSONDecodeError("No valid JSON found", content, 0)
 
     def _validate_content(self, content: dict[str, Any]) -> None:
-        """驗證生成的內容結構"""
+        """驗證生成的內容結構（v0.3：placeholders 格式）"""
         if "slides" not in content:
             raise ValueError("內容缺少 'slides' 欄位")
 
@@ -424,9 +433,24 @@ The user has provided detailed content. You must:
             raise ValueError("slides 陣列為空")
 
         for i, slide in enumerate(content["slides"]):
-            if "title" not in slide:
-                logger.warning(f"Slide {i} 缺少 title")
-            if "bullet_points" not in slide:
-                logger.warning(f"Slide {i} 缺少 bullet_points")
+            # 檢查 placeholders 陣列
+            if "placeholders" not in slide:
+                logger.warning(f"Slide {i} 缺少 placeholders，嘗試從舊格式轉換")
+                # 向後相容：從舊格式轉換
+                placeholders = []
+                if "title" in slide:
+                    placeholders.append({"idx": 0, "type": "TITLE", "content": slide["title"]})
+                if "bullet_points" in slide:
+                    bullets = slide["bullet_points"]
+                    if isinstance(bullets, list):
+                        body_text = "\n".join(f"• {b}" for b in bullets)
+                    else:
+                        body_text = str(bullets)
+                    placeholders.append({"idx": 1, "type": "BODY", "content": body_text})
+                slide["placeholders"] = placeholders
 
-        logger.debug("內容驗證通過")
+            # 驗證至少有一個 placeholder
+            if not slide.get("placeholders"):
+                logger.warning(f"Slide {i} 的 placeholders 為空")
+
+        logger.debug("內容驗證通過（placeholders 格式）")

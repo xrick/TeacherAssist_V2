@@ -1,17 +1,17 @@
 """
 PPT Generation Service V2
 
-五階段流程（含圖片）：
+四階段流程（v0.3 架構）：
 1. TemplateAnalyzer - 分析 Template 結構
-2. ContentGenerator - LLM 擴展使用者輸入
-3. ContentOrganizerV2 - 組織內容到 Template 結構
-4. ImageEnricher - 注入圖片（可選）
-5. SlideBuilder - 建構最終 PPTX
+2. ContentGenerator - LLM 直接輸出 placeholders 格式
+3. ImageEnricher - 注入圖片（可選）
+4. SlideBuilder - 建構最終 PPTX
 
-核心原則：使用者輸入 → LLM 擴展 → 結構化組織 → 圖片注入 → PPTX 輸出
+核心原則：使用者輸入 → LLM 直接生成結構化內容 → 圖片注入 → PPTX 輸出
 
-v0.2 更新：
-- 整合 TemplateConfigLoader 讀取 sys_template_config.json
+v0.3 更新：
+- 移除 ContentOrganizerV2，ContentGenerator 直接輸出 placeholders 格式
+- 簡化管線，減少 LLM 呼叫次數
 - 支援 structure_rules 和 body_pool 輪替
 - 支援 PICTURE placeholder (idx=10)
 """
@@ -25,7 +25,6 @@ from typing import Any
 from app.core.config import settings
 from app.pptagent_core.config import TemplateConfigLoader, get_template_config
 from app.pptagent_core.roles.content_generator import ContentGenerator
-from app.pptagent_core.roles.content_organizer_v2 import ContentOrganizerV2
 from app.pptagent_core.roles.image_enricher import ImageEnricher
 from app.pptagent_core.roles.input_classifier import classify_user_input
 from app.pptagent_core.roles.slide_builder import SlideBuilder
@@ -110,7 +109,7 @@ class PPTServiceV2:
         images_per_slide: int = 1,
     ) -> bytes:
         """
-        從使用者輸入生成簡報
+        從使用者輸入生成簡報（v0.3: 移除 Stage 3，ContentGenerator 直接輸出 placeholders）
 
         Args:
             user_input: 使用者的 markdown/text 輸入
@@ -125,7 +124,7 @@ class PPTServiceV2:
             PPTX 檔案的 bytes
         """
         start_time = datetime.now()
-        total_stages = 5 if add_images else 4
+        total_stages = 4 if add_images else 3  # v0.3: 減少一個 stage
         logger.info(f"開始生成簡報: {len(user_input)} 字元輸入, 圖片: {add_images}")
 
         try:
@@ -149,40 +148,32 @@ class PPTServiceV2:
                 f"(信心度={classification.confidence}) {classification.reason}"
             )
 
-            # Stage 2: 生成內容草稿（v0.2: 支援動態 prompt）
-            logger.info(f"[2/{total_stages}] LLM 擴展使用者輸入...")
+            # Stage 2: 生成內容（v0.3: 直接輸出 placeholders 格式，不需要 Stage 3）
+            logger.info(f"[2/{total_stages}] LLM 生成簡報內容...")
             generator = ContentGenerator(self.llm)
-            draft_content = await generator.generate(
+            content = await generator.generate(
                 user_input=user_input,
                 slide_count=slide_count,
                 audience=audience,
                 language=language,
                 input_mode=classification.mode,
-                prompt_path=template_config.prompt_path,  # v0.2: 動態 prompt
+                prompt_path=template_config.prompt_path,
             )
 
-            # Stage 3: 組織內容到 Template 結構
-            logger.info(f"[3/{total_stages}] 組織內容到 Template...")
-            organizer = ContentOrganizerV2(self.llm)
-            organized_content = await organizer.organize(
-                draft_content=draft_content,
-                template_structure=template_structure,
-            )
-
-            # Stage 4: 注入圖片（可選）
+            # Stage 3: 注入圖片（可選）
             if add_images:
-                logger.info(f"[4/{total_stages}] 注入圖片...")
+                logger.info(f"[3/{total_stages}] 注入圖片...")
                 enricher = ImageEnricher()
                 enriched_content = await enricher.enrich(
-                    organized_content=organized_content,
-                    draft_content=draft_content,
-                    presentation_title=draft_content.get("title", "Presentation"),
+                    organized_content=content,  # v0.3: 直接使用 content
+                    draft_content=content,
+                    presentation_title=content.get("title", "Presentation"),
                     images_per_slide=images_per_slide,
                 )
             else:
-                enriched_content = organized_content
+                enriched_content = content
 
-            # Stage 5 (or 4): 建構 PPTX（v0.2: 傳入 config）
+            # Stage 4 (or 3): 建構 PPTX（v0.2: 傳入 config）
             logger.info(f"[{total_stages}/{total_stages}] 建構 PPTX 檔案...")
             builder = SlideBuilder(template_path, config=template_config)
             pptx_bytes = builder.build(enriched_content)
@@ -214,7 +205,7 @@ class PPTServiceV2:
         images_per_slide: int = 1,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """
-        生成簡報（帶進度串流）
+        生成簡報（帶進度串流）（v0.3: 移除 Stage 3）
 
         Args:
             user_input: 使用者的 markdown/text 輸入
@@ -231,9 +222,9 @@ class PPTServiceV2:
         """
         start_time = datetime.now()
 
-        # 根據是否加入圖片調整進度百分比
-        # 有圖片: 0-10-45-65-85-100
-        # 無圖片: 0-10-50-80-100
+        # v0.3 進度分配：
+        # 有圖片: 0-10 (template) → 10-50 (content) → 50-80 (images) → 80-100 (build)
+        # 無圖片: 0-10 (template) → 10-70 (content) → 70-100 (build)
 
         try:
             # v0.3: 取得 template 路徑和 config (返回 tuple)
@@ -273,63 +264,43 @@ class PPTServiceV2:
                 "message": f"輸入分類: {mode_label} (信心度 {classification.confidence:.0%})",
             }
 
-            # Stage 2: 生成內容草稿 (10-45% or 10-50%)
+            # Stage 2: 生成內容（v0.3: 直接輸出 placeholders 格式）
             yield {
                 "stage": "content_generation",
                 "progress": 12,
-                "message": "LLM 正在擴展和結構化內容...",
+                "message": "LLM 正在生成簡報內容...",
             }
 
             generator = ContentGenerator(self.llm)
-            draft_content = await generator.generate(
+            content = await generator.generate(
                 user_input=user_input,
                 slide_count=slide_count,
                 audience=audience,
                 language=language,
                 input_mode=classification.mode,
-                prompt_path=template_config.prompt_path,  # v0.2: 動態 prompt
+                prompt_path=template_config.prompt_path,
             )
 
-            progress_after_content = 45 if add_images else 50
+            progress_after_content = 50 if add_images else 70
             yield {
                 "stage": "content_generation",
                 "progress": progress_after_content,
-                "message": f"內容草稿完成: {len(draft_content.get('slides', []))} 張投影片",
+                "message": f"內容生成完成: {len(content.get('slides', []))} 張投影片",
             }
 
-            # Stage 3: 組織內容 (45-65% or 50-80%)
-            yield {
-                "stage": "content_organization",
-                "progress": progress_after_content,
-                "message": "組織內容到 Template 結構...",
-            }
-
-            organizer = ContentOrganizerV2(self.llm)
-            organized_content = await organizer.organize(
-                draft_content=draft_content,
-                template_structure=template_structure,
-            )
-
-            progress_after_organize = 65 if add_images else 80
-            yield {
-                "stage": "content_organization",
-                "progress": progress_after_organize,
-                "message": "內容組織完成",
-            }
-
-            # Stage 4: 注入圖片（可選）(65-85%)
+            # Stage 3: 注入圖片（可選）(50-80%)
             if add_images:
                 yield {
                     "stage": "image_enrichment",
-                    "progress": 65,
+                    "progress": 50,
                     "message": "搜尋並注入圖片...",
                 }
 
                 enricher = ImageEnricher()
                 enriched_content = await enricher.enrich(
-                    organized_content=organized_content,
-                    draft_content=draft_content,
-                    presentation_title=draft_content.get("title", "Presentation"),
+                    organized_content=content,  # v0.3: 直接使用 content
+                    draft_content=content,
+                    presentation_title=content.get("title", "Presentation"),
                     images_per_slide=images_per_slide,
                 )
 
@@ -338,15 +309,15 @@ class PPTServiceV2:
                 )
                 yield {
                     "stage": "image_enrichment",
-                    "progress": 85,
+                    "progress": 80,
                     "message": f"圖片注入完成: {total_images} 張圖片",
                 }
             else:
-                enriched_content = organized_content
+                enriched_content = content
                 total_images = 0
 
-            # Stage 5 (or 4): 建構 PPTX (85-100% or 80-100%)（v0.2: 傳入 config）
-            progress_before_build = 85 if add_images else 80
+            # Stage 4 (or 3): 建構 PPTX (80-100% or 70-100%)
+            progress_before_build = 80 if add_images else 70
             yield {
                 "stage": "pptx_building",
                 "progress": progress_before_build,
@@ -370,7 +341,7 @@ class PPTServiceV2:
                     "duration_seconds": duration,
                     "file_size": len(pptx_bytes),
                 },
-                "draft_content": draft_content,
+                "draft_content": content,
             }
 
         except Exception as e:

@@ -336,5 +336,18 @@
     "cached_at": "2026-01-29T07:34:15.670200",
     "expires_at": "2026-02-05T07:34:15.670200",
     "file_size_bytes": 63689
+  },
+  "futuristic_technology_landscape_innovative_tech_sc_8566526": {
+    "image_id": 8566526,
+    "keyword": "Futuristic Technology Landscape, Innovative Tech Scene, Advanced Artificial Intelligence Environment",
+    "file_path": "data/pexels_cache/futuristic_technology_landscape_innovative_tech_sc/8566526.jpg",
+    "original_url": "https://images.pexels.com/photos/8566526/pexels-photo-8566526.jpeg",
+    "photographer": "Kindel Media",
+    "photographer_url": "https://www.pexels.com/@kindelmedia",
+    "pexels_url": "https://www.pexels.com/photo/low-angle-shot-of-robot-8566526/",
+    "alt_text": "A modern humanoid robot with digital face and luminescent screen, symbolizing innovation in technology.",
+    "cached_at": "2026-01-29T08:52:58.645246",
+    "expires_at": "2026-02-05T08:52:58.645246",
+    "file_size_bytes": 29476
   }
 }
