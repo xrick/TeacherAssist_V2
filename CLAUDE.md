@@ -12,16 +12,17 @@ TeacherAssist V2 是一套 AI 驅動的簡報生成系統，使用者輸入 Mark
 - **Cache**: Redis
 - **Config**: `backend/.env` + Pydantic `Settings`
 
-## 核心架構：PPTX 生成管線
+## 核心架構：PPTX 生成管線 (v0.3)
 
 ```
 Stage 0: InputClassifier     — 判斷短題目 / 長文章（多維度評分）
 Stage 1: TemplateAnalyzer    — 分析 PPTX Template 結構
-Stage 2: ContentGenerator    — LLM 擴展/生成內容 → JSON 草稿
-Stage 3: ContentOrganizerV2  — 組織內容到 Template 結構
-Stage 4: ImageEnricher       — 注入 Pexels 圖片（可選）
-Stage 5: SlideBuilder        — 建構最終 PPTX bytes
+Stage 2: ContentGenerator    — LLM 生成內容 → placeholders 格式
+Stage 3: ImageEnricher       — 注入 Pexels 圖片（可選，max_images 限制）
+Stage 4: SlideBuilder        — 建構最終 PPTX bytes
 ```
+
+> **v0.3 變更**: 移除原 Stage 3 (ContentOrganizerV2)，ContentGenerator 直接輸出 `placeholders` 格式
 
 ### 關鍵檔案對照
 
@@ -30,14 +31,14 @@ Stage 5: SlideBuilder        — 建構最終 PPTX bytes
 | `backend/app/services/ppt_service_v2.py` | 主 orchestrator，串連所有 Stage |
 | `backend/app/pptagent_core/roles/input_classifier.py` | Stage 0: 輸入分類 |
 | `backend/app/pptagent_core/roles/template_analyzer.py` | Stage 1: Template 分析 |
-| `backend/app/pptagent_core/roles/content_generator.py` | Stage 2: LLM 內容生成 |
-| `backend/app/pptagent_core/roles/content_organizer_v2.py` | Stage 3: 內容組織 |
-| `backend/app/pptagent_core/roles/image_enricher.py` | Stage 4: 圖片注入 |
-| `backend/app/pptagent_core/roles/slide_builder.py` | Stage 5: PPTX 建構 |
+| `backend/app/pptagent_core/roles/content_generator.py` | Stage 2: LLM 內容生成（輸出 placeholders 格式） |
+| `backend/app/pptagent_core/roles/image_enricher.py` | Stage 3: 圖片注入 |
+| `backend/app/pptagent_core/roles/slide_builder.py` | Stage 4: PPTX 建構 |
 | `backend/app/api/routes/generation.py` | API endpoint |
 | `backend/app/api/schemas/generation.py` | Request/Response schema |
 | `backend/app/services/llm_service.py` | LLM 抽象層（Ollama / OpenAI） |
 | `backend/app/core/config.py` | 全域設定（`Settings` class） |
+| `backend/data/sys_template_config.json` | 模板設定（v0.3） |
 
 ### API 端點
 
@@ -48,8 +49,7 @@ Stage 5: SlideBuilder        — 建構最終 PPTX bytes
 
 ```
 template_analysis → input_classification → content_generation →
-content_organization → image_enrichment → pptx_building →
-generating_script → complete
+image_enrichment → pptx_building → complete
 ```
 
 ## 開發規範
@@ -237,4 +237,59 @@ ollama serve
 - `_fill_slide_content()` 改用 placeholder type + 位置匹配，而非只靠 idx
 - `_place_images()` 優先使用 PICTURE placeholder
 
-**狀態**: 待執行
+**狀態**: 已被 v0.3 架構簡化取代
+
+### 2026-01-29：v0.3 架構簡化 — 移除 Stage 3 (ContentOrganizerV2)
+
+**狀態**: 已完成並通過整合測試
+
+#### 決策
+
+移除 Stage 3 (ContentOrganizerV2)，讓 ContentGenerator 直接輸出 `placeholders` 格式。
+
+**優點**:
+- 減少管線複雜度（6 階段 → 5 階段）
+- ContentGenerator 直接輸出最終格式，無需中間轉換
+
+#### 主要變更
+
+**1. ContentGenerator (`content_generator.py`)**
+- System prompt 更新為輸出 `placeholders` 格式
+- 新增向後相容：`_validate_content()` 可從舊格式自動轉換
+
+**2. PPTServiceV2 (`ppt_service_v2.py`)**
+- 移除 `ContentOrganizerV2` import 和呼叫
+- 新增 `max_images` 參數傳遞
+
+**3. SlideBuilder (`slide_builder.py`)**
+- 修復 layout 選擇：使用 `body_pool` 配置輪替內容頁
+- 修復 placeholder type 匹配：使用 regex 移除 ` (數字)` 後綴
+
+**4. ImageEnricher (`image_enricher.py`)**
+- 新增 `max_images` 參數限制總圖片數量
+
+**5. Prompt 檔案**
+- 5 個 prompt 檔案已更新為輸出 `placeholders` 格式
+
+**6. 設定檔 (`sys_template_config.json`)**
+- 版本號更新為 `"version": "0.3"`
+- 新增 `my_basic` 模板
+
+#### 修復的 Bug
+
+| Bug | 原因 | 修復 |
+|-----|------|------|
+| 所有投影片使用 SECTION_HEADER | `layout_index` 預設為 1 | 使用 `body_pool` 輪替 |
+| 每張投影片都有圖片 | 無總數限制 | 新增 `max_images` 參數 |
+| 內容無法填入（只有標題） | Type 匹配失敗 (`TITLE (1)` vs `TITLE`) | Regex 移除數字後綴 |
+
+#### 整合測試結果
+
+| 測試 | 資料 | Template | 投影片 | 圖片 | 時間 | 結果 |
+|------|------|----------|--------|------|------|------|
+| 1 | DL.txt | my_basic | 10 | 4 | ~150s | 通過 |
+| 2 | brain.txt | education_basic | 8 | 4 | 107s | 通過 |
+
+#### 詳細文件
+
+完整變更記錄見：`claudedocs/dev_diary/v03_architecture_simplification_20260129.md`
