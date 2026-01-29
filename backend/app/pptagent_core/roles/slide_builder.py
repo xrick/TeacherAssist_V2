@@ -11,6 +11,7 @@ v0.2 更新：
 
 import io
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -171,7 +172,11 @@ class SlideBuilder:
                 continue
 
             # 取得 placeholder 的 type 名稱（用於匹配）
-            ph_type_name = str(ph_format.type).replace("PLACEHOLDER_TYPE.", "").replace(" (13)", "")
+            # 移除 "TITLE (1)" 中的 " (數字)" 部分，只保留 "TITLE"
+            import re
+
+            ph_type_raw = str(ph_format.type)
+            ph_type_name = re.sub(r"\s*\(\d+\)$", "", ph_type_raw)
             ph_idx = ph_format.idx
 
             # 優先使用 type 匹配，其次使用 idx 匹配

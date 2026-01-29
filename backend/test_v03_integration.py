@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 v0.3 整合測試：驗證移除 Stage 3 後的管線
-- 輸入：ml.md
-- 輸出：10 頁，其中 4 頁有圖片
+- 輸入：brain.txt
+- 輸出：8 頁，其中 4 頁有圖片
+- Prompt: academic_research_and_deep_analysis_mode.md
 """
 
 import asyncio
@@ -18,7 +19,7 @@ from app.services.ppt_service_v2 import PPTServiceV2
 
 async def main():
     # 讀取測試資料
-    test_data_path = Path(__file__).parent / "tests" / "data" / "DL.txt"
+    test_data_path = Path(__file__).parent / "tests" / "data" / "brain.txt"
     if not test_data_path.exists():
         print(f"錯誤：找不到測試資料 {test_data_path}")
         return
@@ -33,20 +34,21 @@ async def main():
 
     print("=" * 60)
     print("開始 v0.3 整合測試")
-    print("- 目標：10 頁")
+    print("- 目標：8 頁")
     print("- 圖片：啟用，最多 4 張")
-    print("- Template: my_basic")
+    print("- Template: education_basic")
+    print("- Prompt: academic_research_and_deep_analysis_mode.md")
     print("=" * 60)
 
     # 使用串流模式以追蹤進度
-    output_path = Path(__file__).parent / "data" / "outputs" / "test_v03_ml.pptx"
+    output_path = Path(__file__).parent / "data" / "outputs" / "test_v03_brain.pptx"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         async for event in service.generate_stream(
             user_input=user_input,
-            template="my_basic",
-            slide_count=10,
+            template="education_basic",
+            slide_count=8,
             add_images=True,
             images_per_slide=1,
             max_images=4,  # v0.3: 限制最多 4 張圖片
