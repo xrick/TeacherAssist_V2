@@ -9,6 +9,11 @@ PPT Generation Service V2
 5. SlideBuilder - 建構最終 PPTX
 
 核心原則：使用者輸入 → LLM 擴展 → 結構化組織 → 圖片注入 → PPTX 輸出
+
+v0.2 更新：
+- 整合 TemplateConfigLoader 讀取 sys_template_config.json
+- 支援 structure_rules 和 body_pool 輪替
+- 支援 PICTURE placeholder (idx=10)
 """
 
 import logging
@@ -18,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import settings
+from app.pptagent_core.config import TemplateConfigLoader, get_template_config
 from app.pptagent_core.roles.content_generator import ContentGenerator
 from app.pptagent_core.roles.content_organizer_v2 import ContentOrganizerV2
 from app.pptagent_core.roles.image_enricher import ImageEnricher
@@ -51,10 +57,15 @@ class PPTServiceV2:
         self.llm = llm_service or get_llm_service()
         self.templates_path = templates_path or settings.template_storage_path
 
+        # v0.2: 載入 template config
+        self.config_loader = TemplateConfigLoader()
+
     def _get_template_path(self, template: str | None) -> Path:
-        """取得 Template 檔案路徑"""
+        """取得 Template 檔案路徑（v0.2: 優先使用 config 的 default_template）"""
         if template is None:
-            template = "modern_clean.pptx"
+            # v0.2: 使用 config 的 default_template
+            template = self.config_loader.default_template_name
+            logger.debug(f"使用預設 template: {template}")
 
         if not template.endswith(".pptx"):
             template = f"{template}.pptx"
@@ -102,12 +113,14 @@ class PPTServiceV2:
         logger.info(f"開始生成簡報: {len(user_input)} 字元輸入, 圖片: {add_images}")
 
         try:
-            # 取得 Template 路徑
+            # 取得 Template 路徑和 config
             template_path = self._get_template_path(template)
+            template_name = template_path.stem
+            template_config = self.config_loader.get_template_config(template_name)
 
-            # Stage 1: 分析 Template
+            # Stage 1: 分析 Template（v0.2: 傳入 config）
             logger.info(f"[1/{total_stages}] 分析 Template 結構...")
-            analyzer = TemplateAnalyzer(template_path)
+            analyzer = TemplateAnalyzer(template_path, config=template_config)
             template_structure = analyzer.analyze(
                 slide_count=slide_count,
                 include_title=True,
@@ -153,9 +166,9 @@ class PPTServiceV2:
             else:
                 enriched_content = organized_content
 
-            # Stage 5 (or 4): 建構 PPTX
+            # Stage 5 (or 4): 建構 PPTX（v0.2: 傳入 config）
             logger.info(f"[{total_stages}/{total_stages}] 建構 PPTX 檔案...")
-            builder = SlideBuilder(template_path)
+            builder = SlideBuilder(template_path, config=template_config)
             pptx_bytes = builder.build(enriched_content)
 
             # 完成
@@ -207,7 +220,10 @@ class PPTServiceV2:
         # 無圖片: 0-10-50-80-100
 
         try:
+            # v0.2: 取得 template 路徑和 config
             template_path = self._get_template_path(template)
+            template_name = template_path.stem
+            template_config = self.config_loader.get_template_config(template_name)
 
             # Stage 1: 分析 Template (0-10%)
             yield {
@@ -216,7 +232,7 @@ class PPTServiceV2:
                 "message": f"分析 Template: {template_path.name}",
             }
 
-            analyzer = TemplateAnalyzer(template_path)
+            analyzer = TemplateAnalyzer(template_path, config=template_config)
             template_structure = analyzer.analyze(
                 slide_count=slide_count,
                 include_title=True,
@@ -313,7 +329,7 @@ class PPTServiceV2:
                 enriched_content = organized_content
                 total_images = 0
 
-            # Stage 5 (or 4): 建構 PPTX (85-100% or 80-100%)
+            # Stage 5 (or 4): 建構 PPTX (85-100% or 80-100%)（v0.2: 傳入 config）
             progress_before_build = 85 if add_images else 80
             yield {
                 "stage": "pptx_building",
@@ -321,7 +337,7 @@ class PPTServiceV2:
                 "message": "建構 PPTX 檔案...",
             }
 
-            builder = SlideBuilder(template_path)
+            builder = SlideBuilder(template_path, config=template_config)
             pptx_bytes = builder.build(enriched_content)
 
             duration = (datetime.now() - start_time).total_seconds()

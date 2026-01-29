@@ -7,6 +7,10 @@ Stage 1: Analyzes PPTX template structure and prepares slide skeleton
 - 保留設計（Masters, Layouts, Theme）
 - 清除範例內容
 - 建立乾淨的 placeholder 結構
+
+v0.2 更新：
+- 整合 TemplateConfig 讀取 structure_rules
+- 支援 body_pool 輪替選擇 layout
 """
 
 import logging
@@ -15,6 +19,8 @@ from typing import Any
 
 from pptx import Presentation as PptxPresentation
 from pptx.enum.shapes import PP_PLACEHOLDER
+
+from app.pptagent_core.config import TemplateConfig, get_template_config
 
 logger = logging.getLogger(__name__)
 
@@ -47,16 +53,25 @@ class TemplateAnalyzer:
     # 略過的 Placeholder 類型（自動欄位）
     SKIP_TYPES = {"FOOTER", "DATE", "SLIDE_NUMBER"}
 
-    def __init__(self, template_path: Path):
+    def __init__(self, template_path: Path, config: TemplateConfig | None = None):
         """
         初始化 Template Analyzer
 
         Args:
             template_path: PPTX Template 檔案路徑
+            config: TemplateConfig 物件，None 則自動從 template_path 推斷
         """
         self.template_path = template_path
         self._prs: PptxPresentation | None = None
         self._layouts_cache: list[dict] | None = None
+
+        # v0.2: 載入 config
+        if config is not None:
+            self.config = config
+        else:
+            # 從 template_path 推斷 template name
+            template_name = template_path.stem  # e.g., "education_basic"
+            self.config = get_template_config(template_name)
 
     @property
     def prs(self) -> PptxPresentation:
@@ -120,7 +135,7 @@ class TemplateAnalyzer:
         include_closing: bool = True,
     ) -> list[int]:
         """
-        建議版面配置序列
+        建議版面配置序列（v0.2: 使用 config 的 structure_rules）
 
         Args:
             slide_count: 目標投影片數量
@@ -130,30 +145,32 @@ class TemplateAnalyzer:
         Returns:
             Layout 索引列表
         """
-        layouts = self.get_available_layouts()
-
-        # 找出各類型的 layout index
-        title_idx = self._find_layout_by_type(layouts, "TITLE", "SUBTITLE")
-        content_idx = self._find_layout_by_type(layouts, "TITLE", "CONTENT")
-        closing_idx = self._find_layout_by_type(layouts, "SUBTITLE") or title_idx
+        rules = self.config.structure_rules
 
         # 組合序列
         sequence = []
+        body_slide_count = slide_count
 
-        if include_title and title_idx is not None:
-            sequence.append(title_idx)
-            slide_count -= 1
+        # 1. Opening (標題頁)
+        if include_title:
+            sequence.append(rules.opening)
+            body_slide_count -= 1
 
-        if include_closing and closing_idx is not None:
-            slide_count -= 1
+        # 2. Closing (結尾頁) - 先扣除數量
+        if include_closing:
+            body_slide_count -= 1
 
-        # 中間內容頁
-        if content_idx is not None:
-            sequence.extend([content_idx] * max(0, slide_count))
+        # 3. Body slides - 使用 body_pool 輪替
+        body_pool = rules.body_pool
+        for i in range(max(0, body_slide_count)):
+            layout_idx = body_pool[i % len(body_pool)]
+            sequence.append(layout_idx)
 
-        if include_closing and closing_idx is not None:
-            sequence.append(closing_idx)
+        # 4. Closing (結尾頁)
+        if include_closing:
+            sequence.append(rules.closing)
 
+        logger.debug(f"Layout sequence (rules): {sequence}")
         return sequence
 
     def _find_layout_by_type(self, layouts: list[dict], *required_types: str) -> int | None:

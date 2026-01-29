@@ -1,8 +1,12 @@
 """
 Slide Builder Role
 
-Stage 3: Builds the final PPTX file from template and content
+Stage 5: Builds the final PPTX file from template and content
 Enhanced with Layout Engine for Auto-fit and Smart Image Placement
+
+v0.2 更新：
+- 支援 PICTURE placeholder (idx=10)
+- 改進 placeholder 搜尋邏輯
 """
 
 import io
@@ -13,6 +17,8 @@ from typing import Any
 from pptx import Presentation as PptxPresentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.util import Inches
+
+from app.pptagent_core.config import TemplateConfig, get_template_config
 
 # Import Layout Engine components
 from app.pptagent_core.layout_engine.auto_fitter import AutoFitter
@@ -37,11 +43,18 @@ class SlideBuilder:
         PP_PLACEHOLDER.SLIDE_NUMBER,
     }
 
-    def __init__(self, template_path: Path):
+    def __init__(self, template_path: Path, config: TemplateConfig | None = None):
         self.template_path = template_path
         # 初始化時先設為 None，建立時再讀取
         self.slide_width = None
         self.slide_height = None
+
+        # v0.2: 載入 config
+        if config is not None:
+            self.config = config
+        else:
+            template_name = template_path.stem
+            self.config = get_template_config(template_name)
 
     def build(
         self,
@@ -72,10 +85,15 @@ class SlideBuilder:
             # 1. 填入文字內容 (使用 AutoFitter)
             self._fill_slide_content(slide, slide_data)
 
-            # 2. 加入圖片 (新增功能)
+            # 2. 加入圖片 (v0.2: 傳遞 layout_index 以支援 PICTURE placeholder)
             images = slide_data.get("images", [])
             if images:
-                self._place_images(slide, images, slide_data.get("layout", "content"))
+                self._place_images(
+                    slide,
+                    images,
+                    slide_data.get("layout", "content"),
+                    layout_idx,  # v0.2: 傳遞 layout_index
+                )
 
             logger.debug(f"Slide {slide_data.get('index', '?')}: {layout.name} built")
 
@@ -97,8 +115,22 @@ class SlideBuilder:
             del prs.slides._sldIdLst[i]
 
     def _fill_slide_content(self, slide, slide_data: dict[str, Any]) -> None:
-        """填入單張投影片的內容，使用 AutoFitter"""
-        content_map = {ph["idx"]: ph for ph in slide_data.get("placeholders", [])}
+        """填入單張投影片的內容，使用 AutoFitter
+
+        改進：同時支援 idx 和 type 匹配，優先使用 type 以支援不同模板
+        """
+        placeholders = slide_data.get("placeholders", [])
+
+        # 建立 type -> content 映射（主要）和 idx -> content 映射（備用）
+        type_map = {}
+        idx_map = {}
+        for ph in placeholders:
+            ph_type = ph.get("type", "").upper()
+            ph_idx = ph.get("idx")
+            if ph_type:
+                type_map[ph_type] = ph
+            if ph_idx is not None:
+                idx_map[ph_idx] = ph
 
         for shape in slide.shapes:
             if not shape.is_placeholder:
@@ -108,8 +140,20 @@ class SlideBuilder:
             if ph_format.type in self.SKIP_TYPES:
                 continue
 
+            # 取得 placeholder 的 type 名稱（用於匹配）
+            ph_type_name = str(ph_format.type).replace("PLACEHOLDER_TYPE.", "").replace(" (13)", "")
             ph_idx = ph_format.idx
-            ph_data = content_map.get(ph_idx)
+
+            # 優先使用 type 匹配，其次使用 idx 匹配
+            ph_data = type_map.get(ph_type_name) or type_map.get(ph_type_name.upper())
+
+            # 特殊處理：OBJECT 類型可能對應 CONTENT 或 BODY
+            if not ph_data and ph_type_name == "OBJECT":
+                ph_data = type_map.get("CONTENT") or type_map.get("BODY")
+
+            # 備用：使用 idx 匹配
+            if not ph_data:
+                ph_data = idx_map.get(ph_idx)
 
             if not ph_data:
                 # 清除未使用的 placeholder 以保持整潔
@@ -135,36 +179,76 @@ class SlideBuilder:
                 )
                 max_size = 28 if is_title else 24
 
-                # TODO: 可以從 Template 讀取該 Placeholder 原本的字體名稱
-                # 目前暫時統一使用 Arial (因為有 fallback 保護)
                 AutoFitter.fit_text(
                     shape.text_frame, text_str, font_name="Arial", max_font_size=max_size
                 )
 
-    def _place_images(self, slide, images: list, layout_type: str):
+    def _place_images(self, slide, images: list, layout_type: str, layout_index: int = -1):
         """
-        動態配置圖片位置，避免與文字重疊
+        動態配置圖片位置
+
+        v0.2 改進：
+        - 優先使用 PICTURE placeholder (支援 idx=10)
+        - 若無則使用預設位置策略
+
+        Args:
+            slide: 目標投影片
+            images: 圖片資料列表
+            layout_type: layout 類型字串
+            layout_index: layout 索引，用於查詢 config 的 placeholder mapping
         """
         if not images:
             return
 
         # 暫時只處理第一張圖片，避免過度擁擠
         image_data = images[0]
-        # 注意：這裡需適配 models.py 定義的結構 (SlideImage -> dict)
-        # 如果是 Pydantic model dump 出來的 dict，欄位是 snake_case
         img_path = image_data.get("file_path")
 
         if not img_path or not Path(img_path).exists():
             logger.warning(f"Image not found: {img_path}")
             return
 
-        # 預設排版參數 (Safe Zone Strategy)
+        # v0.2: 從 config 取得 PICTURE placeholder idx
+        picture_idx = None
+        if layout_index >= 0:
+            ph_mapping = self.config.get_placeholder_mapping(layout_index)
+            picture_idx = ph_mapping.picture  # 可能是 10 或 None
+            logger.debug(f"Layout {layout_index} picture_idx from config: {picture_idx}")
+
+        # 嘗試找到 PICTURE placeholder
+        picture_placeholder = None
+        for shape in slide.shapes:
+            if shape.is_placeholder:
+                ph_format = shape.placeholder_format
+                # 優先匹配 config 指定的 idx
+                if picture_idx is not None and ph_format.idx == picture_idx:
+                    picture_placeholder = shape
+                    break
+                # 其次匹配 PICTURE type
+                elif ph_format.type == PP_PLACEHOLDER.PICTURE:
+                    picture_placeholder = shape
+                    # 繼續搜尋，看是否有更精確的 idx 匹配
+
+        if picture_placeholder:
+            # 使用 PICTURE placeholder 的位置和尺寸
+            try:
+                # insert_picture 會自動使用 placeholder 的位置和尺寸
+                picture_placeholder.insert_picture(str(img_path))
+                logger.debug(
+                    f"Image placed in PICTURE placeholder (idx={picture_placeholder.placeholder_format.idx})"
+                )
+                return
+            except Exception as e:
+                logger.warning(
+                    f"Failed to use PICTURE placeholder: {e}, falling back to manual placement"
+                )
+
+        # 備用策略：手動放置圖片
         margin = Inches(0.5)
 
         # 根據不同的 Layout 決定圖片位置
-        # 這裡使用「安全區域」策略，確保圖片在右側或特定區域
         if layout_type == "two_column":
-            # 放在右側欄位稍微偏右的位置
+            # 放在右側欄位
             left = self.slide_width * 0.55
             top = Inches(2.0)
             width = self.slide_width * 0.4
@@ -175,8 +259,14 @@ class SlideBuilder:
             top = Inches(1.5)
             width = self.slide_width * 0.45
             height = self.slide_height * 0.65
+        elif layout_type == "full_image":
+            # 全版圖片
+            left = 0
+            top = 0
+            width = self.slide_width
+            height = self.slide_height
         else:
-            # 預設 (Content Layout): 放在右下角，避免遮擋主要列表
+            # 預設: 放在右下角，避免遮擋主要列表
             width = self.slide_width * 0.35
             height = self.slide_height * 0.4
             left = self.slide_width - width - margin
@@ -190,6 +280,7 @@ class SlideBuilder:
                 width=width,
                 height=height,
             )
+            logger.debug(f"Image placed manually at ({left}, {top})")
         except Exception as e:
             logger.error(f"Failed to add image: {e}")
 

@@ -272,7 +272,7 @@ class ContentOrganizerV2:
 
     def _determine_layout_type(self, template_slide: dict[str, Any]) -> str:
         """
-        根據 layout_name 判斷 layout 類型
+        根據 layout_name 和 placeholders 判斷 layout 類型
 
         Args:
             template_slide: 模板投影片結構
@@ -282,23 +282,30 @@ class ContentOrganizerV2:
         """
         layout_name = template_slide.get("layout_name", "").lower()
         layout_index = template_slide.get("layout_index", 1)
+        placeholders = template_slide.get("placeholders", [])
+
+        # 檢查是否有 PICTURE placeholder
+        has_picture = any(ph.get("type") == "PICTURE" for ph in placeholders)
 
         # 根據 layout_name 判斷
         if "title" in layout_name and "content" not in layout_name:
             return "title"
         elif "two" in layout_name or "column" in layout_name:
             return "two_column"
-        elif "image" in layout_name:
-            return "image_text"
+        elif "image" in layout_name or has_picture:
+            return "image_text"  # 有 PICTURE placeholder 就是 image_text
         elif "closing" in layout_name or "end" in layout_name or "thank" in layout_name:
             return "closing"
         elif "section" in layout_name or "header" in layout_name:
             return "section_header"
 
-        # 根據 layout_index 判斷（常見的 PPTX 結構）
+        # 根據 layout_index 判斷（v0.2: 配合 config 的 body_pool）
         if layout_index == 0:
             return "title"
-        elif layout_index == 1:
+        elif layout_index in (8, 9):
+            # Layout 8, 9 有 PICTURE placeholder
+            return "image_text"
+        elif layout_index == 1 or layout_index == 2:
             return "content"
 
         return "content"
