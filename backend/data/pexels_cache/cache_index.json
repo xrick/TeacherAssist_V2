@@ -466,5 +466,57 @@
     "cached_at": "2026-01-29T09:23:50.730535",
     "expires_at": "2026-02-05T09:23:50.730535",
     "file_size_bytes": 41553
+  },
+  "market_pain_points_development_costs_talent_shorta_30139495": {
+    "image_id": 30139495,
+    "keyword": "Market Pain Points, Development Costs, Talent Shortage",
+    "file_path": "data/pexels_cache/market_pain_points_development_costs_talent_shorta/30139495.jpg",
+    "original_url": "https://images.pexels.com/photos/30139495/pexels-photo-30139495.jpeg",
+    "photographer": "Jakub Zerdzicki",
+    "photographer_url": "https://www.pexels.com/@jakubzerdzicki",
+    "pexels_url": "https://www.pexels.com/photo/real-estate-investment-and-financial-planning-concept-30139495/",
+    "alt_text": "A hand holding a small house model with euro notes and coins nearby, illustrating real estate investment and finance.",
+    "cached_at": "2026-01-29T09:39:02.767588",
+    "expires_at": "2026-02-05T09:39:02.767588",
+    "file_size_bytes": 41923
+  },
+  "ai_driven_innovation_machine_learning_applications_30869083": {
+    "image_id": 30869083,
+    "keyword": "AI-driven innovation, Machine learning applications, Data analytics in business",
+    "file_path": "data/pexels_cache/ai_driven_innovation_machine_learning_applications/30869083.jpg",
+    "original_url": "https://images.pexels.com/photos/30869083/pexels-photo-30869083.jpeg",
+    "photographer": "Markus Winkler",
+    "photographer_url": "https://www.pexels.com/@markus-winkler-1430818",
+    "pexels_url": "https://www.pexels.com/photo/scrabble-tiles-spelling-openai-and-deepseek-30869083/",
+    "alt_text": "Close-up of wooden Scrabble tiles spelling OpenAI and DeepSeek on wooden table.",
+    "cached_at": "2026-01-29T09:39:05.194642",
+    "expires_at": "2026-02-05T09:39:05.194642",
+    "file_size_bytes": 49735
+  },
+  "ai_driven_innovation_predictive_analytics_benefits_19891030": {
+    "image_id": 19891030,
+    "keyword": "AI-driven innovation, predictive analytics benefits, business transformation impact.",
+    "file_path": "data/pexels_cache/ai_driven_innovation_predictive_analytics_benefits/19891030.jpg",
+    "original_url": "https://images.pexels.com/photos/19891030/pexels-photo-19891030.jpeg",
+    "photographer": "Markus Winkler",
+    "photographer_url": "https://www.pexels.com/@markus-winkler-1430818",
+    "pexels_url": "https://www.pexels.com/photo/the-word-analytics-spelled-out-in-scrabble-tiles-19891030/",
+    "alt_text": "Scrabble tiles spelling 'Analytics' on a wooden surface, symbolizing data analytics concept.",
+    "cached_at": "2026-01-29T09:39:16.962089",
+    "expires_at": "2026-02-05T09:39:16.962089",
+    "file_size_bytes": 125099
+  },
+  "ai_driven_innovation_tech_transformation_business__17485680": {
+    "image_id": 17485680,
+    "keyword": "AI-driven innovation, tech transformation, business revolution",
+    "file_path": "data/pexels_cache/ai_driven_innovation_tech_transformation_business_/17485680.png",
+    "original_url": "https://images.pexels.com/photos/17485680/pexels-photo-17485680.png",
+    "photographer": "Google DeepMind",
+    "photographer_url": "https://www.pexels.com/@googledeepmind",
+    "pexels_url": "https://www.pexels.com/photo/an-artist-s-illustration-of-artificial-intelligence-ai-this-image-depicts-how-ai-could-be-used-in-the-field-of-sustainability-from-biodiversity-to-climate-it-was-created-by-nidia-dias-17485680/",
+    "alt_text": "A conceptual image blending technology and nature, symbolizing AI's role in sustainable energy.",
+    "cached_at": "2026-01-29T09:39:18.985239",
+    "expires_at": "2026-02-05T09:39:18.985239",
+    "file_size_bytes": 42354
   }
 }
