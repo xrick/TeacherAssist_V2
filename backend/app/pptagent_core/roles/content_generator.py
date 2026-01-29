@@ -241,6 +241,8 @@ class ContentGenerator:
         """
         使用自訂 prompt 模板建立 User Prompt（v0.2 新增）
 
+        僅做變數替換，不添加額外指令。Prompt 檔案本身已包含完整指示。
+
         支援的變數：
         - {USER_DATA} 或 {USER_INPUT}: 使用者輸入
         - {SLIDE_COUNT}: 投影片數量
@@ -249,42 +251,12 @@ class ContentGenerator:
         """
         prompt = template
 
-        # 替換變數
+        # 僅做變數替換
         prompt = prompt.replace("{USER_DATA}", user_input)
         prompt = prompt.replace("{USER_INPUT}", user_input)
         prompt = prompt.replace("{SLIDE_COUNT}", str(slide_count or 10))
         prompt = prompt.replace("{AUDIENCE}", audience or "一般大眾")
         prompt = prompt.replace("{LANGUAGE}", language)
-
-        # 加入 JSON 輸出格式要求
-        json_format_instruction = """
-
-## Output Format (CRITICAL)
-You MUST return a valid JSON object with this exact structure:
-```json
-{
-  "title": "Presentation Title",
-  "target_audience": "Who this is for",
-  "slides": [
-    {
-      "slide_number": 1,
-      "slide_type": "title|content|section|closing",
-      "title": "Slide Title",
-      "bullet_points": ["Point 1", "Point 2"],
-      "visual_suggestion": "Image description",
-      "speaker_notes": "What to say"
-    }
-  ]
-}
-```
-
-IMPORTANT:
-1. Return ONLY valid JSON, no other text
-2. First character must be {
-3. Generate exactly {SLIDE_COUNT} slides
-""".replace("{SLIDE_COUNT}", str(slide_count or 10))
-
-        prompt += json_format_instruction
 
         return prompt
 
