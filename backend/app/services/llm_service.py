@@ -69,7 +69,7 @@ class OllamaProvider(BaseLLMProvider):
     def __init__(self, base_url: str, model: str):
         super().__init__(model)
         self.base_url = base_url.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=600.0)
+        self.client = httpx.AsyncClient(timeout=1200.0)
 
     async def generate(
         self,

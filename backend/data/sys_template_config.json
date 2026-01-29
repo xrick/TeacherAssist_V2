@@ -1,7 +1,22 @@
 {
-  "version": "0.2",
-  "default_template": "education_basic",
+  "version": "0.3",
+  "default_template": "my_basic",
   "templates": {
+    "my_basic": {
+      "file_path": "templates/My_Basic_PPTX_Template.pptx",
+      "prompt_path": "prompts/professional_corporate_prompt.md",
+      "total_layouts": 11,
+      "structure_rules": {
+        "opening": 0,
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
+      },
+      "placeholders": {
+        "standard": { "title": 0, "body": 1 },
+        "exceptions": {}
+      }
+    },
     "education_basic": {
       "file_path": "templates/education_basic.pptx",
       "prompt_path": "prompts/academic_research_and_deep_analysis_mode.md",
@@ -22,7 +37,7 @@
     },
     "industrial_tech": {
       "file_path": "templates/industrial_tech.pptx",
-      "prompt_path": "prompts/industrial_tech_mode.md",
+      "prompt_path": "prompts/industrial_tech_prompt.md",
       "total_layouts": 12,
       "structure_rules": {
         "opening": 0,
@@ -40,7 +55,7 @@
     },
     "professional_corporate": {
       "file_path": "templates/professional_corporate.pptx",
-      "prompt_path": "prompts/professional_corporate_mode.md",
+      "prompt_path": "prompts/professional_corporate_prompt.md",
       "total_layouts": 12,
       "structure_rules": {
         "opening": 0,
@@ -58,7 +73,7 @@
     },
     "strategic_consulting": {
       "file_path": "templates/strategic_consulting.pptx",
-      "prompt_path": "prompts/strategic_consulting_mode.md",
+      "prompt_path": "prompts/strategic_consulting_prompt.md",
       "total_layouts": 12,
       "structure_rules": {
         "opening": 0,
@@ -76,7 +91,7 @@
     },
     "visionary_story": {
       "file_path": "templates/visionary_story.pptx",
-      "prompt_path": "prompts/visionary_story_mode.md",
+      "prompt_path": "prompts/visionary_story_prompt.md",
       "total_layouts": 12,
       "structure_rules": {
         "opening": 0,

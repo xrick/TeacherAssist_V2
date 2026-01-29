@@ -60,13 +60,28 @@ class PPTServiceV2:
         # v0.2: 載入 template config
         self.config_loader = TemplateConfigLoader()
 
-    def _get_template_path(self, template: str | None) -> Path:
-        """取得 Template 檔案路徑（v0.2: 優先使用 config 的 default_template）"""
+    def _get_template_path(self, template: str | None) -> tuple[Path, str]:
+        """取得 Template 檔案路徑和名稱（v0.3: 從 config 讀取 file_path）
+
+        Returns:
+            tuple: (template_path, template_name)
+        """
         if template is None:
-            # v0.2: 使用 config 的 default_template
             template = self.config_loader.default_template_name
             logger.debug(f"使用預設 template: {template}")
 
+        template_name = template  # 保存原始 template name
+
+        # v0.3: 優先從 config 讀取 file_path
+        try:
+            config = self.config_loader.get_template_config(template)
+            template_path = self.templates_path.parent / config.file_path
+            if template_path.exists():
+                return template_path, template_name
+        except KeyError:
+            pass
+
+        # fallback: 直接用 template name 作為檔名
         if not template.endswith(".pptx"):
             template = f"{template}.pptx"
 
@@ -77,11 +92,12 @@ class PPTServiceV2:
             available = list(self.templates_path.glob("*.pptx"))
             if available:
                 template_path = available[0]
+                template_name = template_path.stem
                 logger.info(f"使用替代 Template: {template_path.name}")
             else:
                 raise FileNotFoundError(f"找不到任何 PPTX Template: {self.templates_path}")
 
-        return template_path
+        return template_path, template_name
 
     async def generate(
         self,
@@ -113,9 +129,8 @@ class PPTServiceV2:
         logger.info(f"開始生成簡報: {len(user_input)} 字元輸入, 圖片: {add_images}")
 
         try:
-            # 取得 Template 路徑和 config
-            template_path = self._get_template_path(template)
-            template_name = template_path.stem
+            # 取得 Template 路徑和 config (v0.3: 返回 tuple)
+            template_path, template_name = self._get_template_path(template)
             template_config = self.config_loader.get_template_config(template_name)
 
             # Stage 1: 分析 Template（v0.2: 傳入 config）
@@ -221,9 +236,8 @@ class PPTServiceV2:
         # 無圖片: 0-10-50-80-100
 
         try:
-            # v0.2: 取得 template 路徑和 config
-            template_path = self._get_template_path(template)
-            template_name = template_path.stem
+            # v0.3: 取得 template 路徑和 config (返回 tuple)
+            template_path, template_name = self._get_template_path(template)
             template_config = self.config_loader.get_template_config(template_name)
 
             # Stage 1: 分析 Template (0-10%)
