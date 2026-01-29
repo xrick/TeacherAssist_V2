@@ -26,10 +26,22 @@
   "slides": [
     {
       "slide_number": 1,
-      "slide_type": "title",
-      "title": "投影片標題",
-      "bullet_points": ["要點1", "要點2", "要點3"],
-      "visual_suggestion": "視覺建議描述",
+      "layout": "title",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "簡報主標題"},
+        {"idx": 1, "type": "SUBTITLE", "content": "副標題或標語"}
+      ],
+      "visual_suggestion": "視覺建議描述。Keywords: 關鍵字1, 關鍵字2",
+      "speaker_notes": "講者備註"
+    },
+    {
+      "slide_number": 2,
+      "layout": "content",
+      "placeholders": [
+        {"idx": 0, "type": "TITLE", "content": "投影片標題"},
+        {"idx": 1, "type": "BODY", "content": "• 要點1\n• 要點2\n• 要點3"}
+      ],
+      "visual_suggestion": "視覺建議描述。Keywords: 關鍵字1, 關鍵字2",
       "speaker_notes": "講者備註"
     }
   ]
@@ -40,4 +52,7 @@
 1. 只輸出 JSON，不要加任何其他文字
 2. 第一個字元必須是 `{`
 3. 必須生成正好 {SLIDE_COUNT} 張投影片
-4. slide_type 可以是: title, content, section, closing
+4. 每張投影片必須有 `placeholders` 陣列
+5. TITLE 使用 idx=0，BODY/SUBTITLE 使用 idx=1
+6. Body 內容使用 `• ` 開頭，用 `\n` 分隔多個要點
+7. layout 可以是: title, content, section, closing
