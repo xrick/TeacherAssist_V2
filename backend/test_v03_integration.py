@@ -18,7 +18,7 @@ from app.services.ppt_service_v2 import PPTServiceV2
 
 async def main():
     # 讀取測試資料
-    test_data_path = Path(__file__).parent / "tests" / "data" / "ml.md"
+    test_data_path = Path(__file__).parent / "tests" / "data" / "DL.txt"
     if not test_data_path.exists():
         print(f"錯誤：找不到測試資料 {test_data_path}")
         return
@@ -34,7 +34,7 @@ async def main():
     print("=" * 60)
     print("開始 v0.3 整合測試")
     print("- 目標：10 頁")
-    print("- 圖片：啟用（預期 4 頁有圖）")
+    print("- 圖片：啟用，最多 4 張")
     print("- Template: my_basic")
     print("=" * 60)
 
@@ -49,6 +49,7 @@ async def main():
             slide_count=10,
             add_images=True,
             images_per_slide=1,
+            max_images=4,  # v0.3: 限制最多 4 張圖片
         ):
             stage = event.get("stage", "unknown")
             progress = event.get("progress", 0)

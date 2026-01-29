@@ -66,6 +66,7 @@ class ImageEnricher:
         draft_content: dict[str, Any],
         presentation_title: str,
         images_per_slide: int = 1,
+        max_images: int | None = None,
     ) -> dict[str, Any]:
         """
         為投影片注入圖片
@@ -75,12 +76,13 @@ class ImageEnricher:
             draft_content: ContentGenerator 的輸出
             presentation_title: 簡報標題（用於 AI 關鍵字生成）
             images_per_slide: 每張投影片的圖片數量
+            max_images: 最大總圖片數量（None = 不限制）
 
         Returns:
             enriched_content: 含 images 欄位的內容
         """
         slides = organized_content.get("slides", [])
-        logger.info(f"開始圖片注入: {len(slides)} 張投影片")
+        logger.info(f"開始圖片注入: {len(slides)} 張投影片, max_images={max_images}")
 
         # 建立 draft slides 的 visual_suggestion 對照表
         visual_suggestions = self._build_visual_suggestions_map(draft_content)
@@ -99,6 +101,13 @@ class ImageEnricher:
             # 判斷是否需要圖片
             if layout in SKIP_IMAGE_LAYOUTS:
                 logger.debug(f"Slide {slide_idx}: 跳過圖片 (layout={layout})")
+                enriched_slide["images"] = []
+                enriched_slides.append(enriched_slide)
+                continue
+
+            # v0.3: 檢查是否已達到最大圖片數量
+            if max_images is not None and total_images_added >= max_images:
+                logger.debug(f"Slide {slide_idx}: 已達最大圖片數量 ({max_images})")
                 enriched_slide["images"] = []
                 enriched_slides.append(enriched_slide)
                 continue

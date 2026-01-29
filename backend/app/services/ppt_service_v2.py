@@ -107,6 +107,7 @@ class PPTServiceV2:
         language: str = "zh-TW",
         add_images: bool = True,
         images_per_slide: int = 1,
+        max_images: int | None = None,
     ) -> bytes:
         """
         從使用者輸入生成簡報（v0.3: 移除 Stage 3，ContentGenerator 直接輸出 placeholders）
@@ -169,6 +170,7 @@ class PPTServiceV2:
                     draft_content=content,
                     presentation_title=content.get("title", "Presentation"),
                     images_per_slide=images_per_slide,
+                    max_images=max_images,  # v0.3: 限制總圖片數量
                 )
             else:
                 enriched_content = content
@@ -203,6 +205,7 @@ class PPTServiceV2:
         language: str = "zh-TW",
         add_images: bool = True,
         images_per_slide: int = 1,
+        max_images: int | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """
         生成簡報（帶進度串流）（v0.3: 移除 Stage 3）
@@ -302,6 +305,7 @@ class PPTServiceV2:
                     draft_content=content,
                     presentation_title=content.get("title", "Presentation"),
                     images_per_slide=images_per_slide,
+                    max_images=max_images,  # v0.3: 限制總圖片數量
                 )
 
                 total_images = sum(

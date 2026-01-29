@@ -74,13 +74,43 @@ class SlideBuilder:
         master = prs.slide_masters[master_index]
         layouts = list(master.slide_layouts)
 
-        for slide_data in content.get("slides", []):
-            layout_idx = slide_data.get("layout_index", 1)
+        # v0.3: 從 config 取得 structure_rules
+        structure_rules = self.config.structure_rules if self.config else None
+        body_pool = structure_rules.body_pool if structure_rules else [2]  # 預設用 TITLE_AND_BODY
+        body_pool_idx = 0  # 輪替索引
+
+        slides = content.get("slides", [])
+        total_slides = len(slides)
+
+        for i, slide_data in enumerate(slides):
+            # v0.3: 智慧選擇 layout_index
+            layout_idx = slide_data.get("layout_index")
+
+            if layout_idx is None:
+                # 根據 slide 位置和 layout 類型決定
+                slide_layout = slide_data.get("layout", "content")
+
+                if i == 0 or slide_layout == "title":
+                    # 第一頁或明確標記為 title → 使用 opening layout
+                    layout_idx = structure_rules.opening if structure_rules else 0
+                elif i == total_slides - 1 or slide_layout == "closing":
+                    # 最後一頁或明確標記為 closing → 使用 closing layout
+                    layout_idx = structure_rules.closing if structure_rules else 0
+                elif slide_layout == "section":
+                    # section header
+                    layout_idx = 1  # SECTION_HEADER
+                else:
+                    # 內容頁 → 從 body_pool 輪替
+                    layout_idx = body_pool[body_pool_idx % len(body_pool)]
+                    body_pool_idx += 1
+
             if layout_idx >= len(layouts):
-                layout_idx = 1
+                layout_idx = body_pool[0] if body_pool else 2
 
             layout = layouts[layout_idx]
             slide = prs.slides.add_slide(layout)
+
+            logger.debug(f"Slide {i + 1}/{total_slides}: layout_idx={layout_idx} ({layout.name})")
 
             # 1. 填入文字內容 (使用 AutoFitter)
             self._fill_slide_content(slide, slide_data)
