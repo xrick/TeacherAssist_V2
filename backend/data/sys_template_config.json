@@ -3,7 +3,7 @@
   "default_template": "my_basic",
   "templates": {
     "my_basic": {
-      "file_path": "templates/My_Basic_PPTX_Template.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/professional_corporate_prompt.md",
       "total_layouts": 11,
       "structure_rules": {
@@ -18,93 +18,78 @@
       }
     },
     "education_basic": {
-      "file_path": "templates/education_basic.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/academic_research_and_deep_analysis_mode.md",
-      "total_layouts": 12,
+      "total_layouts": 11,
       "structure_rules": {
         "opening": 0,
-        "agenda": 2,
-        "closing": 0,
-        "body_pool": [2, 8]
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
       },
       "placeholders": {
         "standard": { "title": 0, "body": 1 },
-        "exceptions": {
-          "8": { "title": 0, "body": 1, "picture": 10 },
-          "9": { "title": 0, "body": 1, "picture": 10 }
-        }
+        "exceptions": {}
       }
     },
     "industrial_tech": {
-      "file_path": "templates/industrial_tech.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/industrial_tech_prompt.md",
-      "total_layouts": 12,
+      "total_layouts": 11,
       "structure_rules": {
         "opening": 0,
-        "agenda": 2,
-        "closing": 0,
-        "body_pool": [2, 8]
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
       },
       "placeholders": {
         "standard": { "title": 0, "body": 1 },
-        "exceptions": {
-          "8": { "title": 0, "body": 1, "picture": 10 },
-          "9": { "title": 0, "body": 1, "picture": 10 }
-        }
+        "exceptions": {}
       }
     },
     "professional_corporate": {
-      "file_path": "templates/professional_corporate.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/professional_corporate_prompt.md",
-      "total_layouts": 12,
+      "total_layouts": 11,
       "structure_rules": {
         "opening": 0,
-        "agenda": 2,
-        "closing": 0,
-        "body_pool": [2, 8]
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
       },
       "placeholders": {
         "standard": { "title": 0, "body": 1 },
-        "exceptions": {
-          "8": { "title": 0, "body": 1, "picture": 10 },
-          "9": { "title": 0, "body": 1, "picture": 10 }
-        }
+        "exceptions": {}
       }
     },
     "strategic_consulting": {
-      "file_path": "templates/strategic_consulting.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/strategic_consulting_prompt.md",
-      "total_layouts": 12,
+      "total_layouts": 11,
       "structure_rules": {
         "opening": 0,
-        "agenda": 2,
-        "closing": 0,
-        "body_pool": [2, 8]
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
       },
       "placeholders": {
         "standard": { "title": 0, "body": 1 },
-        "exceptions": {
-          "8": { "title": 0, "body": 1, "picture": 10 },
-          "9": { "title": 0, "body": 1, "picture": 10 }
-        }
+        "exceptions": {}
       }
     },
     "visionary_story": {
-      "file_path": "templates/visionary_story.pptx",
+      "file_path": "templates/standard_template_01.pptx",
       "prompt_path": "prompts/visionary_story_prompt.md",
-      "total_layouts": 12,
+      "total_layouts": 11,
       "structure_rules": {
         "opening": 0,
-        "agenda": 2,
-        "closing": 0,
-        "body_pool": [2, 8]
+        "agenda": 1,
+        "closing": 10,
+        "body_pool": [2, 3]
       },
       "placeholders": {
         "standard": { "title": 0, "body": 1 },
-        "exceptions": {
-          "8": { "title": 0, "body": 1, "picture": 10 },
-          "9": { "title": 0, "body": 1, "picture": 10 }
-        }
+        "exceptions": {}
       }
     }
   }
