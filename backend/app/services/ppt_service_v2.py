@@ -134,7 +134,7 @@ class PPTServiceV2:
                 f"(信心度={classification.confidence}) {classification.reason}"
             )
 
-            # Stage 2: 生成內容草稿
+            # Stage 2: 生成內容草稿（v0.2: 支援動態 prompt）
             logger.info(f"[2/{total_stages}] LLM 擴展使用者輸入...")
             generator = ContentGenerator(self.llm)
             draft_content = await generator.generate(
@@ -143,6 +143,7 @@ class PPTServiceV2:
                 audience=audience,
                 language=language,
                 input_mode=classification.mode,
+                prompt_path=template_config.prompt_path,  # v0.2: 動態 prompt
             )
 
             # Stage 3: 組織內容到 Template 結構
@@ -272,6 +273,7 @@ class PPTServiceV2:
                 audience=audience,
                 language=language,
                 input_mode=classification.mode,
+                prompt_path=template_config.prompt_path,  # v0.2: 動態 prompt
             )
 
             progress_after_content = 45 if add_images else 50

@@ -7,16 +7,61 @@ Stage 2: Uses LLM to expand and structure user input into presentation content
 - 接收使用者的 markdown/text 輸入
 - 使用 LLM 擴展、分析、結構化內容
 - 輸出詳細的投影片草稿（含標題、要點、視覺建議、講者備註）
+
+v0.2 更新：
+- 支援動態載入 prompt 檔案
+- 支援 Markdown 格式輸入提升 LLM 理解
 """
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from app.pptagent_core.roles.input_classifier import InputMode
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
+
+
+def load_prompt_template(prompt_path: str | Path | None) -> str | None:
+    """
+    載入 prompt 模板檔案
+
+    Args:
+        prompt_path: prompt 檔案路徑（相對於 backend/data/ 或絕對路徑）
+
+    Returns:
+        prompt 模板字串，或 None 如果檔案不存在
+    """
+    if prompt_path is None:
+        return None
+
+    # 嘗試多個路徑
+    path = Path(prompt_path)
+    if not path.is_absolute():
+        # 相對路徑，嘗試從 backend/data/ 開始
+        base_paths = [
+            Path(__file__).parent.parent.parent.parent / "data",  # backend/data/
+            Path(__file__).parent.parent.parent.parent,  # backend/
+        ]
+        for base in base_paths:
+            candidate = base / prompt_path
+            if candidate.exists():
+                path = candidate
+                break
+
+    if not path.exists():
+        logger.warning(f"Prompt 檔案不存在: {prompt_path}")
+        return None
+
+    try:
+        content = path.read_text(encoding="utf-8")
+        logger.info(f"載入 prompt 模板: {path.name}")
+        return content
+    except Exception as e:
+        logger.error(f"載入 prompt 失敗: {e}")
+        return None
 
 
 # System Prompt for Content Generation
@@ -95,6 +140,7 @@ class ContentGenerator:
         language: str = "zh-TW",
         input_mode: InputMode = InputMode.DIRECT,
         max_json_retries: int = 2,
+        prompt_path: str | None = None,
     ) -> dict[str, Any]:
         """
         從使用者輸入生成投影片內容
@@ -106,14 +152,28 @@ class ContentGenerator:
             language: 輸出語言
             input_mode: 輸入模式（SEARCH=短題目, DIRECT=長文章）
             max_json_retries: JSON 解析失敗時的最大重試次數
+            prompt_path: 動態 prompt 模板路徑（v0.2 新增）
 
         Returns:
             結構化的投影片內容
         """
         logger.info(f"生成內容: {len(user_input)} 字元輸入, 模式={input_mode.value}")
 
-        # 建立 User Prompt（根據輸入模式調整策略）
-        user_prompt = self._build_prompt(user_input, slide_count, audience, language, input_mode)
+        # v0.2: 載入動態 prompt 模板
+        custom_prompt_template = load_prompt_template(prompt_path) if prompt_path else None
+
+        # 建立 User Prompt
+        if custom_prompt_template:
+            # 使用自訂 prompt 模板，替換變數
+            user_prompt = self._build_custom_prompt(
+                custom_prompt_template, user_input, slide_count, audience, language
+            )
+            logger.info(f"使用自訂 prompt 模板: {prompt_path}")
+        else:
+            # 使用預設 prompt（根據輸入模式調整策略）
+            user_prompt = self._build_prompt(
+                user_input, slide_count, audience, language, input_mode
+            )
 
         last_error = None
         for attempt in range(1 + max_json_retries):
@@ -169,6 +229,64 @@ class ContentGenerator:
         # 所有重試都失敗
         logger.error(f"JSON 解析在 {1 + max_json_retries} 次嘗試後仍然失敗")
         raise last_error  # type: ignore[misc]
+
+    def _build_custom_prompt(
+        self,
+        template: str,
+        user_input: str,
+        slide_count: int | None,
+        audience: str | None,
+        language: str,
+    ) -> str:
+        """
+        使用自訂 prompt 模板建立 User Prompt（v0.2 新增）
+
+        支援的變數：
+        - {USER_DATA} 或 {USER_INPUT}: 使用者輸入
+        - {SLIDE_COUNT}: 投影片數量
+        - {AUDIENCE}: 目標受眾
+        - {LANGUAGE}: 輸出語言
+        """
+        prompt = template
+
+        # 替換變數
+        prompt = prompt.replace("{USER_DATA}", user_input)
+        prompt = prompt.replace("{USER_INPUT}", user_input)
+        prompt = prompt.replace("{SLIDE_COUNT}", str(slide_count or 10))
+        prompt = prompt.replace("{AUDIENCE}", audience or "一般大眾")
+        prompt = prompt.replace("{LANGUAGE}", language)
+
+        # 加入 JSON 輸出格式要求
+        json_format_instruction = """
+
+## Output Format (CRITICAL)
+You MUST return a valid JSON object with this exact structure:
+```json
+{
+  "title": "Presentation Title",
+  "target_audience": "Who this is for",
+  "slides": [
+    {
+      "slide_number": 1,
+      "slide_type": "title|content|section|closing",
+      "title": "Slide Title",
+      "bullet_points": ["Point 1", "Point 2"],
+      "visual_suggestion": "Image description",
+      "speaker_notes": "What to say"
+    }
+  ]
+}
+```
+
+IMPORTANT:
+1. Return ONLY valid JSON, no other text
+2. First character must be {
+3. Generate exactly {SLIDE_COUNT} slides
+""".replace("{SLIDE_COUNT}", str(slide_count or 10))
+
+        prompt += json_format_instruction
+
+        return prompt
 
     def _build_prompt(
         self,

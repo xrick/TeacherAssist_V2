@@ -271,5 +271,70 @@
     "cached_at": "2026-01-25T09:57:46.193630",
     "expires_at": "2026-02-01T09:57:46.193630",
     "file_size_bytes": 65513
+  },
+  "ai_healthcare_application_case_study_30869149": {
+    "image_id": 30869149,
+    "keyword": "AI Healthcare Application Case Study",
+    "file_path": "data/pexels_cache/ai_healthcare_application_case_study/30869149.jpg",
+    "original_url": "https://images.pexels.com/photos/30869149/pexels-photo-30869149.jpeg",
+    "photographer": "Markus Winkler",
+    "photographer_url": "https://www.pexels.com/@markus-winkler-1430818",
+    "pexels_url": "https://www.pexels.com/photo/ai-news-concept-with-scrabble-letters-30869149/",
+    "alt_text": "Wooden Scrabble tiles spelling 'AI' and 'NEWS' for a tech concept image.",
+    "cached_at": "2026-01-29T07:31:17.250147",
+    "expires_at": "2026-02-05T07:31:17.250147",
+    "file_size_bytes": 50056
+  },
+  "ai_evolution_timeline_ethical_challenges_in_ai_art_18069488": {
+    "image_id": 18069488,
+    "keyword": "AI evolution timeline, ethical challenges in AI, artificial intelligence progress and dilemmas",
+    "file_path": "data/pexels_cache/ai_evolution_timeline_ethical_challenges_in_ai_art/18069488.png",
+    "original_url": "https://images.pexels.com/photos/18069488/pexels-photo-18069488.png",
+    "photographer": "Google DeepMind",
+    "photographer_url": "https://www.pexels.com/@googledeepmind",
+    "pexels_url": "https://www.pexels.com/photo/an-artist-s-illustration-of-artificial-intelligence-ai-this-image-depicts-the-potential-of-ai-for-society-through-3d-visualisations-it-was-created-by-novoto-studio-as-part-of-the-visua-18069488/",
+    "alt_text": "Abstract representation of AI ethics with pills on a clear pathway, symbolizing data sorting.",
+    "cached_at": "2026-01-29T07:31:19.361264",
+    "expires_at": "2026-02-05T07:31:19.361264",
+    "file_size_bytes": 101176
+  },
+  "ancient_technology_timeline_7679465": {
+    "image_id": 7679465,
+    "keyword": "ancient technology timeline,",
+    "file_path": "data/pexels_cache/ancient_technology_timeline/7679465.jpg",
+    "original_url": "https://images.pexels.com/photos/7679465/pexels-photo-7679465.jpeg",
+    "photographer": "MART  PRODUCTION",
+    "photographer_url": "https://www.pexels.com/@mart-production",
+    "pexels_url": "https://www.pexels.com/photo/doing-business-using-a-laptop-7679465/",
+    "alt_text": "Close-up of video editing software on laptop, focused on timeline.",
+    "cached_at": "2026-01-29T07:34:10.352039",
+    "expires_at": "2026-02-05T07:34:10.352039",
+    "file_size_bytes": 53453
+  },
+  "ai_technology_trends_30530425": {
+    "image_id": 30530425,
+    "keyword": "AI technology trends",
+    "file_path": "data/pexels_cache/ai_technology_trends/30530425.jpg",
+    "original_url": "https://images.pexels.com/photos/30530425/pexels-photo-30530425.jpeg",
+    "photographer": "Matheus Bertelli",
+    "photographer_url": "https://www.pexels.com/@bertellifotografia",
+    "pexels_url": "https://www.pexels.com/photo/smartphone-with-ai-chatbot-interface-displayed-30530425/",
+    "alt_text": "Close-up of smartphone screen showing AI chatbot interface, featuring DeepSeek AI conversation.",
+    "cached_at": "2026-01-29T07:34:13.030846",
+    "expires_at": "2026-02-05T07:34:13.030846",
+    "file_size_bytes": 16851
+  },
+  "\u672a\u6765\u8d8b\u52bf\u56fe_4611347": {
+    "image_id": 4611347,
+    "keyword": "\u672a\u6765\u8d8b\u52bf\u56fe",
+    "file_path": "data/pexels_cache/\u672a\u6765\u8d8b\u52bf\u56fe/4611347.jpg",
+    "original_url": "https://images.pexels.com/photos/4611347/pexels-photo-4611347.jpeg",
+    "photographer": "zhang kaiyv",
+    "photographer_url": "https://www.pexels.com/@zhangkaiyv",
+    "pexels_url": "https://www.pexels.com/photo/a-man-reading-a-book-4611347/",
+    "alt_text": "Senior man reading a book outdoors in Beijing, conveying a peaceful and studious atmosphere.",
+    "cached_at": "2026-01-29T07:34:15.670200",
+    "expires_at": "2026-02-05T07:34:15.670200",
+    "file_size_bytes": 63689
   }
 }

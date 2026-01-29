@@ -16,9 +16,28 @@
 原始資料："""{USER_DATA}"""
 目標頁數：{SLIDE_COUNT} 頁
 
-# Output
-請按頁數順序輸出，每頁請提供：
-- 頁碼
-- 標題 (有力且吸引人)
-- 核心內容 (3-5 個關鍵點)
-- 擴充論述 (用於演講的詳細解釋)
+# Output Format (CRITICAL)
+你必須輸出有效的 JSON 格式，結構如下：
+
+```json
+{
+  "title": "簡報標題",
+  "target_audience": "目標受眾",
+  "slides": [
+    {
+      "slide_number": 1,
+      "slide_type": "title",
+      "title": "投影片標題",
+      "bullet_points": ["要點1", "要點2", "要點3"],
+      "visual_suggestion": "視覺建議描述",
+      "speaker_notes": "講者備註"
+    }
+  ]
+}
+```
+
+## 重要規則
+1. 只輸出 JSON，不要加任何其他文字
+2. 第一個字元必須是 `{`
+3. 必須生成正好 {SLIDE_COUNT} 張投影片
+4. slide_type 可以是: title, content, section, closing

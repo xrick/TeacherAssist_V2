@@ -8,6 +8,9 @@ Stage 3: Organizes generated content into template structure
 - 接收 TemplateAnalyzer 的輸出（Template 結構）
 - 將草稿內容對應到 Template 的 Placeholder 結構
 - 使用 LLM 進行精煉和適配
+
+v0.2 更新：
+- 新增 json2markdown 轉換，提升 LLM 理解能力
 """
 
 import json
@@ -17,6 +20,112 @@ from typing import Any
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
+
+
+def json2markdown_draft(draft: dict[str, Any]) -> str:
+    """
+    將草稿 JSON 轉換為 Markdown 格式
+
+    Args:
+        draft: 草稿內容 dict
+
+    Returns:
+        Markdown 格式字串
+    """
+    lines = []
+
+    # 標題
+    title = draft.get("title", "未命名簡報")
+    lines.append(f"# {title}")
+    lines.append("")
+
+    # 每張投影片
+    for slide in draft.get("slides", []):
+        slide_num = slide.get("slide_number", "?")
+        slide_type = slide.get("slide_type", "content")
+        slide_title = slide.get("title", "")
+
+        lines.append(f"## 投影片 {slide_num} ({slide_type})")
+        lines.append(f"**標題**: {slide_title}")
+
+        # Bullet points
+        bullets = slide.get("bullet_points", [])
+        if bullets:
+            lines.append("**內容要點**:")
+            for bullet in bullets:
+                lines.append(f"- {bullet}")
+
+        # Visual suggestion
+        visual = slide.get("visual_suggestion", "")
+        if visual:
+            lines.append(f"**視覺建議**: {visual}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def json2markdown_template(template: dict[str, Any]) -> str:
+    """
+    將 Template 結構 JSON 轉換為 Markdown 表格格式
+
+    Args:
+        template: Template 結構 dict
+
+    Returns:
+        Markdown 格式字串
+    """
+    lines = []
+
+    template_name = template.get("template", "unknown")
+    slide_count = template.get("slide_count", 0)
+
+    lines.append(f"# Template: {template_name}")
+    lines.append(f"總投影片數: {slide_count}")
+    lines.append("")
+
+    # 投影片結構表格
+    lines.append("| 投影片 | Layout | Placeholders |")
+    lines.append("|--------|--------|--------------|")
+
+    for slide in template.get("slides", []):
+        idx = slide.get("index", "?")
+        layout_idx = slide.get("layout_index", "?")
+        layout_name = slide.get("layout_name", "")
+
+        # 格式化 placeholders
+        ph_list = []
+        for ph in slide.get("placeholders", []):
+            ph_type = ph.get("type", "?")
+            ph_idx = ph.get("idx", "?")
+            ph_list.append(f"{ph_type}(idx={ph_idx})")
+
+        ph_str = ", ".join(ph_list) if ph_list else "無"
+        lines.append(f"| {idx} | {layout_idx} ({layout_name}) | {ph_str} |")
+
+    lines.append("")
+
+    # 詳細 placeholder 說明
+    lines.append("## Placeholder 填入說明")
+    lines.append("")
+
+    for slide in template.get("slides", []):
+        idx = slide.get("index", "?")
+        lines.append(f"### 投影片 {idx}")
+
+        for ph in slide.get("placeholders", []):
+            ph_type = ph.get("type", "?")
+            ph_idx = ph.get("idx", "?")
+            ph_format = ph.get("format", "text")
+
+            if ph_format == "bullet_list":
+                lines.append(f'- **{ph_type}** (idx={ph_idx}): 填入列表 `["項目1", "項目2", ...]`')
+            else:
+                lines.append(f"- **{ph_type}** (idx={ph_idx}): 填入文字")
+
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 # System Prompt for Content Organization
@@ -128,7 +237,7 @@ class ContentOrganizerV2:
         draft_content: dict[str, Any],
         template_structure: dict[str, Any],
     ) -> str:
-        """建立 User Prompt"""
+        """建立 User Prompt（v0.2: 使用 Markdown 格式提升 LLM 理解）"""
         # 簡化草稿內容
         simplified_draft = {"title": draft_content.get("title", ""), "slides": []}
 
@@ -144,27 +253,47 @@ class ContentOrganizerV2:
                 }
             )
 
+        # v0.2: 使用 Markdown 格式代替純 JSON
+        draft_md = json2markdown_draft(simplified_draft)
+        template_md = json2markdown_template(template_structure)
+
         return f"""## 簡報草稿內容
 
-```json
-{json.dumps(simplified_draft, ensure_ascii=False, indent=2)}
-```
+{draft_md}
 
 ## Template 結構（需要填入的結構）
 
-```json
-{json.dumps(template_structure, ensure_ascii=False, indent=2)}
-```
+{template_md}
 
 ## 任務
 
-請將草稿內容精煉後填入 Template 結構的 placeholder content 欄位。
-- 草稿的 slide_number 對應 Template 的 index
+請將草稿內容精煉後，產生符合以下 JSON 格式的輸出：
+
+```json
+{{
+  "slides": [
+    {{
+      "index": 0,
+      "layout_index": 0,
+      "placeholders": [
+        {{"idx": 0, "type": "TITLE", "content": "標題文字"}},
+        {{"idx": 1, "type": "CONTENT", "content": ["要點1", "要點2"]}}
+      ]
+    }}
+  ]
+}}
+```
+
+### 對應規則
+- 草稿的 slide_number 對應 index
 - 草稿的 title 對應 TITLE placeholder
 - 草稿的 bullet_points 對應 CONTENT/BODY placeholder（格式為列表）
-- 草稿的 subtitle 或第一個 bullet point 可對應 SUBTITLE placeholder
+- SUBTITLE 可用草稿的第一個 bullet point
 
-返回完整的 Template 結構 JSON，確保 slides 陣列長度與 Template 一致。"""
+### 重要
+1. 只輸出 JSON，不要加任何說明
+2. 第一個字元必須是 `{{`
+3. slides 陣列長度必須是 {template_structure.get("slide_count", 0)}"""
 
     def _parse_json_response(self, content: str) -> dict[str, Any]:
         """解析 LLM 回應中的 JSON"""

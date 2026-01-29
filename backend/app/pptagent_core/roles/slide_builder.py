@@ -232,10 +232,22 @@ class SlideBuilder:
         if picture_placeholder:
             # 使用 PICTURE placeholder 的位置和尺寸
             try:
-                # insert_picture 會自動使用 placeholder 的位置和尺寸
-                picture_placeholder.insert_picture(str(img_path))
+                # 取得 placeholder 的位置和尺寸
+                left = picture_placeholder.left
+                top = picture_placeholder.top
+                width = picture_placeholder.width
+                height = picture_placeholder.height
+
+                # 使用 add_picture 放置圖片到 placeholder 的位置
+                slide.shapes.add_picture(
+                    str(img_path),
+                    left,
+                    top,
+                    width=width,
+                    height=height,
+                )
                 logger.debug(
-                    f"Image placed in PICTURE placeholder (idx={picture_placeholder.placeholder_format.idx})"
+                    f"Image placed at PICTURE placeholder position (idx={picture_placeholder.placeholder_format.idx})"
                 )
                 return
             except Exception as e:
