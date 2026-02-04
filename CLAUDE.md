@@ -293,3 +293,125 @@ ollama serve
 #### 詳細文件
 
 完整變更記錄見：`claudedocs/dev_diary/v03_architecture_simplification_20260129.md`
+
+### 2026-02-04：v0.4 改善計畫 — 三大研究課題與架構規劃
+
+**狀態**: 研究完成，計畫已產出，待核准後進入實作
+
+#### 背景
+
+針對 v0.3 管線的三大弱點進行深度研究，產出 v0.4 整合改善計畫。
+
+#### 研究課題一：網路搜尋 + LLM Prompt 整合
+
+**目標**: 使用者輸入短題目時，系統先搜尋網路取得相關資料，再結合 prompt 生成有據可查的內容。
+
+**研究結果**:
+- **搜尋 API 選型**: Tavily Search（主要，AI-optimized + 內建摘要）、DuckDuckGo（備用/開發測試）
+- **架構設計**: 新增 Stage 0.5 `WebSearcher`，僅 SEARCH 模式觸發
+- **注入機制**: 搜尋結果格式化為 `<reference_materials>` XML，注入 `{{RAG_DOCUMENTS_HERE}}` placeholder（system prompt 中已預留但從未啟用）
+- **Token 預算**: 搜尋結果限 1,250 tokens，最多 5 筆來源
+- **Strategy Pattern**: `SearchProvider` ABC → `TavilyProvider` / `DuckDuckGoProvider` 可插拔
+
+**新增檔案規劃**:
+- `backend/app/services/search_service.py` — 搜尋抽象層
+- `backend/app/pptagent_core/roles/web_searcher.py` — Stage 0.5 角色
+
+**修改檔案規劃**:
+- `backend/app/pptagent_core/roles/content_generator.py` — `_build_prompt()` 注入 search_context
+- `backend/app/services/ppt_service_v2.py` — 管線新增 Stage 0.5
+- `backend/app/core/config.py` — `Settings` 新增搜尋相關設定
+
+#### 研究課題二：精準美觀文字排版
+
+**目標**: 解決 AutoFitter 的致命排版問題，實現 CJK 字體支援與 bullet list 保留。
+
+**發現的現有問題**:
+
+| 問題 | 嚴重度 | 位置 |
+|------|--------|------|
+| `font.name="Arial"` 硬編碼，無 CJK 支援 | 高 | `auto_fitter.py` |
+| `p.text = text` 單段落填充，bullet list 消失 | 致命 | `auto_fitter.py` |
+| 無 `<a:ea>` 東亞字體 XML 設定 | 高 | `auto_fitter.py` |
+| `measure_text()` 以空格分詞，中文斷行異常 | 高 | `text_metrics.py` |
+| `"\n".join(...)` 合併所有內容為單段落 | 致命 | `slide_builder.py` |
+
+**解決方案設計**:
+- **`FontConfig`** dataclass: latin + east_asian + complex_script 三層字體配置
+- **`EnhancedAutoFitter`**: 多段落填充（每個 bullet point 獨立段落）、XML 操作設定 `<a:ea>` 東亞字體、CJK-aware binary search 字體大小
+- **`CJKTextMetrics`**: 逐字斷行（CJK 字元可在任意位置斷行）、字元寬度估算（全形 vs 半形）
+- **Bullet list XML**: `<a:buChar>` + `marL` + `indent`（hanging indent）
+- **行距**: 1.35x（CJK 建議 1.3~1.5）
+- **段落間距**: 6pt after（可配置）
+
+**新增檔案規劃**:
+- `backend/app/pptagent_core/layout_engine/font_config.py`
+
+**重寫檔案規劃**:
+- `backend/app/pptagent_core/layout_engine/auto_fitter.py` — `EnhancedAutoFitter`
+- `backend/app/pptagent_core/layout_engine/text_metrics.py` — `CJKTextMetrics`
+
+**修改檔案規劃**:
+- `backend/app/pptagent_core/roles/slide_builder.py` — `_fill_slide_content()` 改用多段落填充
+
+#### 研究課題三：PEXELS API 精準圖片搜尋
+
+**目標**: 解決圖片搜尋效能瓶頸 + 提升圖片相關性。
+
+**發現的現有問題**:
+
+| 問題 | 嚴重度 | 影響 |
+|------|--------|------|
+| 逐張投影片呼叫 LLM 生成關鍵字 | 致命（效能） | Ollama 下 ~60s/slide |
+| 關鍵字品質不穩（抽象標題 → 不相關圖片） | 高 | 圖片匹配度低 |
+| 無方向匹配（landscape/portrait） | 中 | 圖片比例與版面不符 |
+| 無去重機制 | 中 | 不同投影片可能配到相同圖片 |
+| Cache 鍵值不含 orientation | 低 | 同關鍵字不同方向共用 cache |
+
+**解決方案設計**:
+- **Stage 2.5 `BatchKeywordGenerator`**: 單次 LLM 呼叫生成所有投影片的英文關鍵字（N 次 → 1 次，效能提升 90%+）
+- **方向匹配**: `ORIENTATION_MAP` 依 layout 類型自動選擇 landscape/portrait
+- **圖片去重**: `used_image_ids: set[int]` 全域追蹤，搜尋時排除已使用的圖片
+- **Cache 修正**: `f"pexels:{keyword}:{orientation}:{per_page}"`
+- **色彩匹配**（可選進階）: 從 template 色彩主題提取 Pexels `color` 參數
+
+**新增檔案規劃**:
+- `backend/app/pptagent_core/roles/batch_keyword_gen.py`
+
+**修改檔案規劃**:
+- `backend/app/pptagent_core/roles/image_enricher.py` — 使用預生成關鍵字 + 去重
+- `backend/app/services/pexels_service.py` — Cache 鍵值修正
+- `backend/app/services/ppt_service_v2.py` — 管線新增 Stage 2.5
+
+#### v0.4 預期管線
+
+```
+Stage 0  : InputClassifier     — 輸入分類
+Stage 0.5: WebSearcher [NEW]   — 網路搜尋增強（僅 SEARCH 模式）
+Stage 1  : TemplateAnalyzer    — 模板分析
+Stage 2  : ContentGenerator    — LLM 內容生成（注入搜尋結果）
+Stage 2.5: BatchKeywordGen [NEW] — 批次圖片關鍵字生成
+Stage 3  : ImageEnricher       — 圖片注入（使用預生成關鍵字 + 去重）
+Stage 4  : SlideBuilder        — PPTX 建構（EnhancedAutoFitter）
+```
+
+#### 實作優先序
+
+1. **Phase 1 — 排版基礎修復**（最高優先）: FontConfig + CJKTextMetrics + EnhancedAutoFitter + SlideBuilder 修改
+2. **Phase 2 — 圖片搜尋優化**（高優先）: BatchKeywordGenerator + 方向匹配 + 去重 + Cache 修正
+3. **Phase 3 — 網路搜尋整合**（中優先）: SearchService + WebSearcher + ContentGenerator 注入 + Settings 更新
+4. **Phase 4 — 整合驗證**: 端對端測試 + 效能基準 + PPTX 視覺品質檢查
+
+#### 風險評估
+
+| 風險 | 機率 | 影響 | 緩解策略 |
+|------|------|------|---------|
+| Tavily API 不穩定 | 低 | 高 | Strategy Pattern + DuckDuckGo fallback |
+| CJK 字體跨 OS 不可用 | 中 | 中 | fallback chain + `_get_system_font_path()` |
+| 批次關鍵字 JSON 解析失敗 | 中 | 中 | 復用 7 層 JSON fallback |
+| XML 操作破壞 PPTX | 低 | 高 | 單元測試 + PPTX 開啟驗證 |
+
+#### 產出文件
+
+- 系統 Workflow + Dataflow 文件：`claudedocs/workflow_dataflow_20260204.md`
+- v0.4 整合改善計畫：螢幕輸出（含完整設計規格、程式碼範例、管線全景圖）
